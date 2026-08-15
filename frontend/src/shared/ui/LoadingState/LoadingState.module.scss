@@ -1,0 +1,4 @@
+.loading { min-height: 180px; display: grid; place-content: center; justify-items: center; gap: 14px; color: var(--text-muted); }
+.orbit { width: 34px; height: 34px; border: 2px solid var(--border); border-top-color: var(--accent-bright); border-radius: 50%; animation: spin 900ms linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+

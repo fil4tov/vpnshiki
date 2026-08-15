@@ -1,0 +1,26 @@
+.pulse { position: relative; display: grid; grid-template-columns: 190px minmax(0, 1fr); align-items: center; gap: 22px 38px; min-height: 330px; padding: 36px clamp(24px, 4vw, 52px); overflow: hidden; background: linear-gradient(120deg, var(--surface-strong), var(--surface)); border: 1px solid var(--border); border-radius: 24px; box-shadow: var(--shadow); }
+.pulse::after { position: absolute; inset: 0; pointer-events: none; content: ''; background: radial-gradient(circle at 19% 50%, var(--pulse-glow), transparent 25rem); opacity: .82; }
+.active { --pulse: var(--positive); --pulse-glow: rgba(53,214,161,.16); }
+.paused { --pulse: var(--warning); --pulse-glow: rgba(255,191,105,.12); }
+.blocked { --pulse: var(--danger); --pulse-glow: rgba(255,109,141,.13); }
+.orbit { position: relative; z-index: 1; display: grid; width: 166px; height: 166px; place-items: center; border: 1px solid color-mix(in srgb, var(--pulse) 42%, transparent); border-radius: 50%; box-shadow: 0 0 55px color-mix(in srgb, var(--pulse) 14%, transparent), inset 0 0 38px color-mix(in srgb, var(--pulse) 8%, transparent); }
+.orbit::before, .orbit::after { position: absolute; content: ''; border: 1px solid color-mix(in srgb, var(--pulse) 20%, transparent); border-radius: 50%; }
+.orbit::before { width: 128px; height: 128px; }
+.orbit::after { width: 196px; height: 196px; border-style: dashed; animation: orbit 18s linear infinite; }
+.core { display: grid; width: 84px; height: 84px; place-items: center; color: var(--pulse); font-size: 1.7rem; background: color-mix(in srgb, var(--pulse) 10%, var(--surface-strong)); border: 1px solid color-mix(in srgb, var(--pulse) 38%, transparent); border-radius: 50%; box-shadow: 0 0 34px color-mix(in srgb, var(--pulse) 20%, transparent); }
+.content { position: relative; z-index: 1; }
+.content h2 { margin: 16px 0 8px; font-size: clamp(1.65rem, 3vw, 2.5rem); letter-spacing: -.045em; }
+.content p { max-width: 510px; margin: 0; color: var(--text-muted); line-height: 1.6; }
+.control { position: relative; z-index: 1; grid-column: 2; display: flex; align-items: center; justify-content: space-between; gap: 20px; padding-top: 22px; border-top: 1px solid var(--border); }
+.control span { color: var(--text-muted); font-size: .82rem; }
+@keyframes orbit { to { transform: rotate(360deg); } }
+
+@media (max-width: 680px) {
+  .pulse { grid-template-columns: 1fr; justify-items: center; padding: 32px 22px; text-align: center; }
+  .orbit { width: 136px; height: 136px; }
+  .orbit::before { width: 106px; height: 106px; }
+  .orbit::after { width: 156px; height: 156px; }
+  .core { width: 70px; height: 70px; }
+  .control { width: 100%; grid-column: 1; }
+}
+

@@ -1,0 +1,31 @@
+.field {
+  display: grid;
+  gap: 8px;
+}
+
+.label {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 620;
+}
+
+.input {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 14px;
+  color: var(--text);
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  outline: none;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+
+  &::placeholder { color: color-mix(in srgb, var(--text-muted) 70%, transparent); }
+  &:hover { border-color: color-mix(in srgb, var(--text-muted) 40%, transparent); }
+  &:focus { border-color: var(--accent); box-shadow: var(--focus); background: var(--surface-strong); }
+}
+
+.invalid { border-color: var(--danger); }
+.error { color: var(--danger); font-size: 0.78rem; }
+.hint { color: var(--text-muted); font-size: 0.76rem; }
+

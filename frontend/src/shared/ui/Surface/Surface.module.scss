@@ -1,0 +1,9 @@
+.surface {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  backdrop-filter: blur(18px);
+}
+
+.elevated { box-shadow: var(--shadow); }
+

@@ -1,0 +1,31 @@
+.switch {
+  position: relative;
+  width: 50px;
+  height: 28px;
+  padding: 3px;
+  cursor: pointer;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  transition: background 160ms ease, border-color 160ms ease;
+
+  &:focus-visible { outline: none; box-shadow: var(--focus); }
+  &:disabled { cursor: not-allowed; opacity: 0.48; }
+}
+
+.checked {
+  background: var(--positive-soft);
+  border-color: color-mix(in srgb, var(--positive) 50%, transparent);
+}
+
+.thumb {
+  display: block;
+  width: 20px;
+  height: 20px;
+  background: var(--text-muted);
+  border-radius: 50%;
+  transition: transform 180ms cubic-bezier(.2,.8,.2,1), background 160ms ease;
+}
+
+.checked .thumb { background: var(--positive); transform: translateX(22px); box-shadow: 0 0 14px color-mix(in srgb, var(--positive) 55%, transparent); }
+
