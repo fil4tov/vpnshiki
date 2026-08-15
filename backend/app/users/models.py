@@ -4,7 +4,7 @@ from enum import StrEnum
 from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, Index, Numeric, String, Uuid, func
+from sqlalchemy import CheckConstraint, DateTime, Index, Numeric, String, Uuid, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
@@ -18,6 +18,12 @@ class UserRole(StrEnum):
     USER = "user"
 
 
+class AccountStatus(StrEnum):
+    ACTIVE = "active"
+    PAUSED = "paused"
+    BLOCKED = "blocked"
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -29,8 +35,9 @@ class User(Base):
         Numeric(14, 2), nullable=False, default=Decimal("0.00")
     )
     role: Mapped[str] = mapped_column(String(16), nullable=False, default=UserRole.USER.value)
-    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
-    is_blocked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    account_status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default=AccountStatus.ACTIVE.value
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
     )
@@ -48,5 +55,8 @@ class User(Base):
         Index("uq_users_name_lower", func.lower(name), unique=True),
         CheckConstraint("negative_balance_limit >= 0", name="ck_users_negative_limit_nonnegative"),
         CheckConstraint("role IN ('admin', 'user')", name="ck_users_role"),
+        CheckConstraint(
+            "account_status IN ('active', 'paused', 'blocked')",
+            name="ck_users_account_status",
+        ),
     )
-

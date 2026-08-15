@@ -6,23 +6,15 @@ from app.auth.security import hash_password, verify_password
 from app.auth.service import replace_all_sessions
 from app.config import get_settings
 from app.errors import ApiError
-from app.users.schemas import ActivityUpdate, PasswordChange, UserRead
+from app.tariff_plans.service import get_user_daily_charge
+from app.users.schemas import DailyChargeRead, PasswordChange, UserRead
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
 
-@router.patch("/me/activity", response_model=UserRead)
-async def update_activity(payload: ActivityUpdate, user: CurrentUser, db: Database) -> UserRead:
-    if user.is_blocked:
-        raise ApiError(
-            status_code=409,
-            code="user_blocked",
-            message="Смена участия недоступна, пока аккаунт заблокирован",
-        )
-    user.is_active = payload.is_active
-    await db.commit()
-    await db.refresh(user)
-    return UserRead.model_validate(user)
+@router.get("/me/daily-charge", response_model=DailyChargeRead)
+async def read_daily_charge(user: CurrentUser, db: Database) -> DailyChargeRead:
+    return DailyChargeRead(daily_charge=await get_user_daily_charge(db, user))
 
 
 @router.post("/me/password", response_model=UserRead)
@@ -44,4 +36,3 @@ async def change_password(
     token = await replace_all_sessions(db, user)
     set_session_cookie(response, token, get_settings())
     return UserRead.model_validate(user)
-

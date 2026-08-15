@@ -1,4 +1,5 @@
 export type UserRole = 'admin' | 'user';
+export type AccountStatus = 'active' | 'paused' | 'blocked';
 
 export interface User {
   id: string;
@@ -6,10 +7,13 @@ export interface User {
   balance: string;
   negative_balance_limit: string;
   role: UserRole;
-  is_active: boolean;
-  is_blocked: boolean;
+  account_status: AccountStatus;
   created_at: string;
   updated_at: string;
+}
+
+export interface DailyCharge {
+  daily_charge: string | null;
 }
 
 export interface LoginPayload {
@@ -23,9 +27,7 @@ export interface AdminUserPayload {
   balance: string;
   negative_balance_limit: string;
   role: UserRole;
-  is_active: boolean;
-  is_blocked: boolean;
+  account_status: AccountStatus;
 }
 
 export type AdminUserUpdatePayload = Omit<AdminUserPayload, 'password'>;
-

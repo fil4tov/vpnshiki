@@ -1,0 +1,1 @@
+export { DeleteTariffPlanConfirmation } from './DeleteTariffPlanConfirmation';

@@ -14,6 +14,7 @@ from app.bootstrap import ensure_admin
 from app.config import get_settings
 from app.db import SessionFactory
 from app.errors import ApiError
+from app.tariff_plans import router as tariff_plans_router
 from app.users.router import router as users_router
 
 logger = logging.getLogger(__name__)
@@ -30,6 +31,7 @@ app = FastAPI(title="VPNщики API", lifespan=lifespan)
 app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(admin_router)
+app.include_router(tariff_plans_router)
 
 
 @app.exception_handler(ApiError)

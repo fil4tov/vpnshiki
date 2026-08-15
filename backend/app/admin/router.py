@@ -8,7 +8,7 @@ from app.auth.dependencies import CurrentAdmin, Database
 from app.auth.models import AuthSession
 from app.auth.security import hash_password
 from app.errors import ApiError
-from app.users.models import User, UserRole
+from app.users.models import AccountStatus, User, UserRole
 from app.users.schemas import AdminPasswordReset, AdminUserCreate, AdminUserUpdate, UserRead
 
 router = APIRouter(prefix="/api/admin/users", tags=["admin"])
@@ -50,8 +50,7 @@ async def create_user(
         balance=payload.balance,
         negative_balance_limit=payload.negative_balance_limit,
         role=payload.role.value,
-        is_active=payload.is_active,
-        is_blocked=payload.is_blocked,
+        account_status=payload.account_status.value,
     )
     db.add(user)
     await _commit_unique(db)
@@ -80,10 +79,28 @@ async def update_user(
                 message="Нельзя понизить роль последнего администратора",
             )
     for field, value in changes.items():
-        setattr(user, field, value.value if isinstance(value, UserRole) else value)
+        setattr(user, field, value.value if isinstance(value, (AccountStatus, UserRole)) else value)
     await _commit_unique(db)
     await db.refresh(user)
     return UserRead.model_validate(user)
+
+
+@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_user(
+    user_id: UUID,
+    admin: CurrentAdmin,
+    db: Database,
+) -> None:
+    user = await _get_user(db, user_id)
+    if user.id == admin.id:
+        raise ApiError(
+            status_code=409,
+            code="cannot_delete_self",
+            message="Нельзя удалить собственный аккаунт",
+        )
+    await db.execute(AuthSession.__table__.delete().where(AuthSession.user_id == user.id))
+    await db.delete(user)
+    await db.commit()
 
 
 @router.post("/{user_id}/password", status_code=status.HTTP_204_NO_CONTENT)
@@ -98,4 +115,3 @@ async def reset_password(
     await db.flush()
     await db.execute(AuthSession.__table__.delete().where(AuthSession.user_id == user.id))
     await db.commit()
-

@@ -8,6 +8,10 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
+    files: ['design-preview/**/*.js'],
+    languageOptions: { globals: { document: 'readonly' } },
+  },
+  {
     files: ['**/*.{ts,tsx}'],
     languageOptions: { ecmaVersion: 2022 },
     plugins: { 'react-hooks': reactHooks, 'react-refresh': reactRefresh },
@@ -17,4 +21,3 @@ export default tseslint.config(
     },
   },
 );
-

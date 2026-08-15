@@ -1,5 +1,6 @@
 .field {
   display: grid;
+  align-content: start;
   gap: 8px;
 }
 
@@ -28,4 +29,3 @@
 .invalid { border-color: var(--danger); }
 .error { color: var(--danger); font-size: 0.78rem; }
 .hint { color: var(--text-muted); font-size: 0.76rem; }
-

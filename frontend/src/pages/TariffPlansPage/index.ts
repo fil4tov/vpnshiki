@@ -1,0 +1,1 @@
+export { TariffPlansPage } from './TariffPlansPage';

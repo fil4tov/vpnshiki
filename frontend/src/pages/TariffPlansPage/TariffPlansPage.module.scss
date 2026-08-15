@@ -1,0 +1,56 @@
+.page { display: grid; gap: 20px; }
+.heading { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin-bottom: 5px; }
+.heading p { margin-bottom: 7px; color: var(--accent-bright); font-family: var(--font-data); font-size: .68rem; text-transform: uppercase; letter-spacing: .14em; }
+.heading h1 { margin: 0; font-size: clamp(1.9rem,4vw,3.2rem); line-height: 1; letter-spacing: -.055em; }
+.directory { overflow: hidden; }
+.toolbar { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 20px 22px; border-bottom: 1px solid var(--border); }
+.toolbar > div:first-child { display: grid; gap: 3px; }
+.toolbar h2 { margin: 0; font-size: 1rem; }
+.toolbar div span { color: var(--text-muted); font-size: .7rem; }
+.timezone { display: flex; align-items: center; gap: 8px; padding: 8px 11px; background: var(--surface-muted); border: 1px solid var(--border); border-radius: 10px; }
+.timezone svg { color: var(--accent-bright); }
+.tableWrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th { padding: 13px 18px; color: var(--text-muted); font-size: .66rem; font-weight: 620; text-align: left; text-transform: uppercase; letter-spacing: .09em; white-space: nowrap; }
+td { padding: 15px 18px; border-top: 1px solid var(--border); }
+tbody tr { transition: background 140ms ease; }
+tbody tr:hover { background: var(--surface-muted); }
+.planIdentity { display: flex; align-items: center; gap: 11px; min-width: 155px; }
+.planIdentity strong { font-family: var(--font-data); font-size: .77rem; letter-spacing: -.02em; }
+.planMark { display: grid; flex: 0 0 36px; height: 36px; place-items: center; border: 1px solid var(--border); border-radius: 11px; }
+.planMark.active { color: var(--positive); background: var(--positive-soft); border-color: color-mix(in srgb,var(--positive) 24%,transparent); box-shadow: 0 0 22px color-mix(in srgb,var(--positive) 9%,transparent); }
+.planMark.scheduled { color: var(--accent-bright); background: var(--accent-soft); border-color: var(--border-strong); }
+.planMark.completed { color: var(--text-muted); background: var(--surface-muted); }
+.money, .date { font-family: var(--font-data); font-size: .76rem; white-space: nowrap; }
+.date { color: var(--text-muted); }
+.rowActions { display: flex; justify-content: flex-end; gap: 6px; }
+.rowActions button { display: grid; width: 34px; height: 34px; place-items: center; color: var(--text-muted); cursor: pointer; background: transparent; border: 1px solid transparent; border-radius: 9px; }
+.rowActions button:hover:not(:disabled) { color: var(--text); background: var(--surface-muted); border-color: var(--border); }
+.rowActions .deleteAction:hover:not(:disabled) { color: var(--danger); background: var(--danger-soft); border-color: color-mix(in srgb,var(--danger) 25%,transparent); }
+.rowActions button:disabled { cursor: not-allowed; opacity: .3; }
+.rowActions button:focus-visible { outline: none; box-shadow: var(--focus); }
+.empty { min-height: 230px; display: grid; place-content: center; justify-items: center; gap: 14px; padding: 32px; color: var(--text-muted); text-align: center; }
+.emptyIcon { display: grid; width: 48px; height: 48px; place-items: center; color: var(--accent-bright); font-size: 1.2rem; background: var(--accent-soft); border: 1px solid var(--border-strong); border-radius: 14px; }
+.empty div { display: grid; gap: 5px; }
+.empty strong { color: var(--text); font-size: .9rem; }
+.empty p { max-width: 390px; margin: 0; font-size: .78rem; line-height: 1.55; }
+.srOnly { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+@media (max-width: 760px) {
+  .heading { align-items: start; }
+  .heading button { min-width: 43px; padding-inline: 12px; font-size: 0; }
+  .heading button svg { font-size: 1rem; }
+  .toolbar { align-items: flex-start; }
+  thead { display: none; }
+  tbody, tr, td { display: block; }
+  tr { padding: 14px 16px; border-top: 1px solid var(--border); }
+  td { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 7px 0; border: 0; }
+  td::before { content: attr(data-label); color: var(--text-muted); font-size: .68rem; }
+  td:first-child { padding-bottom: 12px; }
+  td:first-child::before, .rowActions::before { display: none; }
+  .rowActions { justify-content: flex-end; }
+}
+
+@media (max-width: 460px) {
+  .timezone span { display: none; }
+}

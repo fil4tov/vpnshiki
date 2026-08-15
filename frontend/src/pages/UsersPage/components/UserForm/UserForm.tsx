@@ -1,9 +1,10 @@
 import { useEffect } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 
-import type { AdminUserPayload, AdminUserUpdatePayload, User } from '#entities/user';
+import type { AccountStatus, AdminUserPayload, AdminUserUpdatePayload, User } from '#entities/user';
 import { ApiError } from '#shared/api';
-import { Button, PasswordField, Switch, TextField } from '#shared/ui';
+import { Button, FieldSelect, PasswordField, TextField } from '#shared/ui';
+import type { FieldSelectOption } from '#shared/ui';
 
 import styles from './UserForm.module.scss';
 
@@ -13,8 +14,7 @@ interface FormValues {
   balance: string;
   negativeBalanceLimit: string;
   role: 'admin' | 'user';
-  isActive: boolean;
-  isBlocked: boolean;
+  accountStatus: AccountStatus;
 }
 
 interface UserFormProps {
@@ -29,15 +29,30 @@ const defaults = (user?: User): FormValues => ({
   balance: user?.balance ?? '0.00',
   negativeBalanceLimit: user?.negative_balance_limit ?? '0.00',
   role: user?.role ?? 'user',
-  isActive: user?.is_active ?? true,
-  isBlocked: user?.is_blocked ?? false,
+  accountStatus: user?.account_status ?? 'active',
 });
 
+const statusDescriptions: Record<AccountStatus, string> = {
+  active: 'Участвует в общем расчёте',
+  paused: 'Участие и ежедневные списания приостановлены',
+  blocked: 'Не участвует и не может самостоятельно изменить статус',
+};
+
+const roleOptions = [
+  { value: 'user', label: 'Участник' },
+  { value: 'admin', label: 'Администратор' },
+] satisfies FieldSelectOption[];
+
+const statusOptions = [
+  { value: 'active', label: 'Активен' },
+  { value: 'paused', label: 'Приостановлен' },
+  { value: 'blocked', label: 'Заблокирован' },
+] satisfies FieldSelectOption[];
+
 export function UserForm({ user, onCancel, onSubmit }: UserFormProps) {
-  const { register, handleSubmit, reset, setError, setValue, control, formState: { errors, isSubmitting } } = useForm<FormValues>({ defaultValues: defaults(user) });
+  const { register, handleSubmit, reset, setError, control, formState: { errors, isSubmitting } } = useForm<FormValues>({ defaultValues: defaults(user) });
   useEffect(() => reset(defaults(user)), [reset, user]);
-  const active = useWatch({ control, name: 'isActive' });
-  const blocked = useWatch({ control, name: 'isBlocked' });
+  const accountStatus = useWatch({ control, name: 'accountStatus' });
 
   const submit = handleSubmit(async (values) => {
     const payload = {
@@ -45,8 +60,7 @@ export function UserForm({ user, onCancel, onSubmit }: UserFormProps) {
       balance: values.balance,
       negative_balance_limit: values.negativeBalanceLimit,
       role: values.role,
-      is_active: values.isActive,
-      is_blocked: values.isBlocked,
+      account_status: values.accountStatus,
       ...(!user ? { password: values.password } : {}),
     } as AdminUserPayload | AdminUserUpdatePayload;
     try {
@@ -72,13 +86,38 @@ export function UserForm({ user, onCancel, onSubmit }: UserFormProps) {
         <TextField label="Баланс, ₽" type="number" step="0.01" error={errors.balance?.message} {...register('balance', { required: 'Введите баланс' })} />
         <TextField label="Допустимый минус, ₽" type="number" min="0" step="0.01" error={errors.negativeBalanceLimit?.message} {...register('negativeBalanceLimit', { required: 'Введите лимит', min: { value: 0, message: 'Лимит не может быть отрицательным' } })} />
       </div>
-      <label className={styles.selectField}>
-        <span>Роль</span>
-        <select {...register('role')}><option value="user">Участник</option><option value="admin">Администратор</option></select>
-      </label>
-      <div className={styles.toggles}>
-        <div><div><strong>Участвует</strong><span>Аккаунт входит в общий расчёт</span></div><Switch checked={active} label="Участие пользователя" onClick={() => setValue('isActive', !active, { shouldDirty: true })} /></div>
-        <div><div><strong>Заблокирован</strong><span>Пользователь не может менять статус</span></div><Switch checked={blocked} label="Блокировка пользователя" onClick={() => setValue('isBlocked', !blocked, { shouldDirty: true })} /></div>
+      <div className={styles.selectRow}>
+        <Controller
+          control={control}
+          name="role"
+          render={({ field }) => (
+            <FieldSelect
+              ref={field.ref}
+              name={field.name}
+              label="Роль"
+              options={roleOptions}
+              value={field.value}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+            />
+          )}
+        />
+        <Controller
+          control={control}
+          name="accountStatus"
+          render={({ field }) => (
+            <FieldSelect
+              ref={field.ref}
+              name={field.name}
+              label="Статус аккаунта"
+              options={statusOptions}
+              value={field.value}
+              hint={statusDescriptions[accountStatus]}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+            />
+          )}
+        />
       </div>
       {errors.root?.message && <p className={styles.formError}>{errors.root.message}</p>}
       <div className={styles.actions}><Button type="button" variant="ghost" onClick={onCancel}>Отмена</Button><Button type="submit" loading={isSubmitting}>{user ? 'Сохранить изменения' : 'Создать пользователя'}</Button></div>

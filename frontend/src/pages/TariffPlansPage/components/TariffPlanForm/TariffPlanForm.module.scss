@@ -1,0 +1,11 @@
+.form { display: grid; gap: 17px; }
+.fieldsRow { display: grid; grid-template-columns: 1fr 1fr; gap: 13px; }
+.timezoneNote { display: flex; align-items: flex-start; gap: 10px; padding: 12px 13px; color: var(--text-muted); font-size: .75rem; line-height: 1.5; background: var(--accent-soft); border: 1px solid var(--border-strong); border-radius: 12px; }
+.timezoneNote svg { flex: 0 0 auto; margin-top: 2px; color: var(--accent-bright); }
+.formError { margin: 0; color: var(--danger); font-size: .82rem; }
+.actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 3px; }
+
+@media (max-width: 540px) {
+  .fieldsRow { grid-template-columns: 1fr; }
+  .actions { display: grid; grid-template-columns: 1fr 1fr; }
+}

@@ -61,3 +61,8 @@ pnpm build
 pnpm test:e2e
 ```
 
+`pnpm test:e2e` поднимает отдельный Compose-проект `vpnshiki-e2e` на тестовых портах,
+запускает Playwright и затем удаляет контейнеры вместе с тестовым volume PostgreSQL.
+Локальная база приложения при этом не используется. Для запуска Playwright против уже
+подготовленного внешнего стенда используйте `pnpm test:e2e:direct` и переменные `E2E_BASE_URL`,
+`E2E_ADMIN_NAME`, `E2E_ADMIN_PASSWORD`.
