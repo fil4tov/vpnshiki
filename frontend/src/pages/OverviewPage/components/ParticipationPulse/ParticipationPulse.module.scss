@@ -1,8 +1,7 @@
 .pulse { position: relative; min-height: 300px; padding: 28px 32px; overflow: hidden; background: linear-gradient(120deg,var(--surface-strong),var(--surface)); border: 1px solid var(--border); border-radius: 24px; box-shadow: var(--shadow); }
-.pulse::after { position: absolute; inset: 0; pointer-events: none; content: ''; background: radial-gradient(ellipse at 15% 55%,var(--pulse-glow),transparent 48%); }
-.active { --pulse: var(--positive); --pulse-glow: rgba(53,214,161,.16); }
-.paused { --pulse: var(--warning); --pulse-glow: rgba(255,191,105,.12); }
-.blocked { --pulse: var(--danger); --pulse-glow: rgba(255,109,141,.13); }
+.active { --pulse: var(--positive); }
+.paused { --pulse: var(--warning); }
+.blocked { --pulse: var(--danger); }
 
 .topLine { position: relative; z-index: 2; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 .status { display: flex; align-items: center; gap: 10px; }

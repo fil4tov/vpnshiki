@@ -1,18 +1,6 @@
 .button {
   position: relative;
   transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
-  will-change: transform;
-
-  &:hover:not(:disabled) {
-    color: var(--text);
-    background: var(--accent-soft);
-    border-color: var(--border-strong);
-    transform: none;
-  }
-}
-
-.copied {
-  animation: copy-press 160ms cubic-bezier(.2, .8, .25, 1);
 }
 
 .icon {
@@ -50,12 +38,6 @@
   transform: scale(1.08) rotate(0deg);
 }
 
-@keyframes copy-press {
-  0%, 100% { transform: translateY(0); }
-  45% { transform: translateY(3px) scale(.985); }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .copied { animation: none; }
   .icon svg { transition: none; }
 }

@@ -93,8 +93,9 @@
     color: var(--text);
     background: var(--accent-soft);
     border-color: var(--border-strong);
-    transform: none;
   }
+
+  &:active:not(:disabled) { background: color-mix(in srgb, var(--accent) 24%, transparent); }
 }
 
 .empty {

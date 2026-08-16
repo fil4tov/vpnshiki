@@ -23,6 +23,7 @@
 .iconButton { width: 42px; padding: 0; font-size: 1rem; }
 .iconButton svg { display: block; }
 .adminLink:hover, .iconButton:hover, .activeAdminLink { color: var(--text); background: var(--accent-soft); border-color: var(--border-strong); }
+.adminLink:active, .iconButton:active { color: var(--text); background: color-mix(in srgb, var(--accent) 24%, transparent); border-color: var(--border-strong); }
 .adminLink:focus-visible, .iconButton:focus-visible, .brand:focus-visible { outline: none; box-shadow: var(--focus); }
 
 @media (max-width: 580px) {

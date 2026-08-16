@@ -24,9 +24,11 @@ tbody tr:hover { background: var(--surface-muted); }
 .money, .date { font-family: var(--font-data); font-size: .76rem; white-space: nowrap; }
 .date { color: var(--text-muted); }
 .rowActions { display: flex; justify-content: flex-end; gap: 6px; }
-.rowActions button { display: grid; width: 34px; height: 34px; place-items: center; color: var(--text-muted); cursor: pointer; background: transparent; border: 1px solid transparent; border-radius: 9px; }
+.rowActions button { display: grid; width: 34px; height: 34px; place-items: center; color: var(--text-muted); cursor: pointer; background: transparent; border: 1px solid transparent; border-radius: 9px; transition: color 160ms ease, border-color 160ms ease, background 160ms ease; }
 .rowActions button:hover:not(:disabled) { color: var(--text); background: var(--surface-muted); border-color: var(--border); }
 .rowActions .deleteAction:hover:not(:disabled) { color: var(--danger); background: var(--danger-soft); border-color: color-mix(in srgb,var(--danger) 25%,transparent); }
+.rowActions button:active:not(:disabled) { color: var(--text); background: color-mix(in srgb, var(--surface-muted) 58%, var(--accent-soft)); border-color: var(--border-strong); }
+.rowActions .deleteAction:active:not(:disabled) { color: var(--danger); background: color-mix(in srgb, var(--danger) 24%, transparent); border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
 .rowActions button:disabled { cursor: not-allowed; opacity: .3; }
 .rowActions button:focus-visible { outline: none; box-shadow: var(--focus); }
 .empty { min-height: 230px; display: grid; place-content: center; justify-items: center; gap: 14px; padding: 32px; color: var(--text-muted); text-align: center; }

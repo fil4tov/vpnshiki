@@ -1,3 +1,15 @@
+@property --button-primary-start {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: #8b5cf6;
+}
+
+@property --button-primary-end {
+  syntax: '<color>';
+  inherits: false;
+  initial-value: #c064ff;
+}
+
 .button {
   display: inline-flex;
   min-height: 42px;
@@ -11,11 +23,12 @@
   cursor: pointer;
   border: 1px solid transparent;
   border-radius: 12px;
-  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
-
-  &:hover:not(:disabled) {
-    transform: translateY(-1px);
-  }
+  transition:
+    color 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease,
+    --button-primary-start 160ms ease,
+    --button-primary-end 160ms ease;
 
   &:focus-visible {
     outline: none;
@@ -29,9 +42,21 @@
 }
 
 .primary {
+  --button-primary-start: var(--accent);
+  --button-primary-end: var(--accent-bright);
   color: white;
-  background: linear-gradient(135deg, var(--accent), var(--accent-bright));
+  background: linear-gradient(135deg, var(--button-primary-start), var(--button-primary-end));
   box-shadow: 0 8px 24px rgba(139, 92, 246, 0.22);
+
+  &:hover:not(:disabled) {
+    --button-primary-start: color-mix(in srgb, var(--accent) 90%, white);
+    --button-primary-end: color-mix(in srgb, var(--accent-bright) 90%, white);
+  }
+
+  &:active:not(:disabled) {
+    --button-primary-start: color-mix(in srgb, var(--accent) 86%, black);
+    --button-primary-end: color-mix(in srgb, var(--accent-bright) 86%, black);
+  }
 }
 
 .secondary {
@@ -39,6 +64,12 @@
   border-color: var(--border);
 
   &:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--surface-muted) 55%, var(--accent-soft));
+    border-color: var(--border-strong);
+  }
+
+  &:active:not(:disabled) {
+    background: color-mix(in srgb, var(--surface-muted) 30%, var(--accent-soft));
     border-color: var(--border-strong);
   }
 }
@@ -51,12 +82,27 @@
     color: var(--text);
     background: var(--surface-muted);
   }
+
+  &:active:not(:disabled) {
+    color: var(--text);
+    background: color-mix(in srgb, var(--surface-muted) 58%, var(--accent-soft));
+  }
 }
 
 .danger {
   color: var(--danger);
   background: var(--danger-soft);
   border-color: color-mix(in srgb, var(--danger) 28%, transparent);
+
+  &:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--danger) 18%, transparent);
+    border-color: color-mix(in srgb, var(--danger) 36%, transparent);
+  }
+
+  &:active:not(:disabled) {
+    background: color-mix(in srgb, var(--danger) 25%, transparent);
+    border-color: color-mix(in srgb, var(--danger) 44%, transparent);
+  }
 }
 
 .fullWidth {

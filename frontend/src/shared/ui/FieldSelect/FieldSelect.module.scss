@@ -31,7 +31,13 @@
 }
 
 .control:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--surface-muted) 55%, var(--accent-soft));
   border-color: color-mix(in srgb, var(--text-muted) 40%, transparent);
+}
+
+.control:active:not(:disabled) {
+  background: color-mix(in srgb, var(--surface-muted) 30%, var(--accent-soft));
+  border-color: var(--border-strong);
 }
 
 .control:focus-visible,

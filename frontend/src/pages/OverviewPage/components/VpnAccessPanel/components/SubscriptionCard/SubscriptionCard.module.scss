@@ -1,26 +1,62 @@
+@property --subscription-border-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
 .card {
+  --subscription-border-angle: 0deg;
   position: relative;
   display: flex;
   min-height: 470px;
   flex-direction: column;
   padding: 28px;
   overflow: hidden;
-  color: white;
-  background: linear-gradient(145deg, #6d35d7 0%, #914bed 52%, #7754df 100%);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #f8f5fa;
+  background:
+    radial-gradient(circle at 15% 14%, rgba(202, 127, 255, 0.13), transparent 40%),
+    radial-gradient(circle at 90% 78%, rgba(139, 92, 246, 0.1), transparent 43%),
+    linear-gradient(145deg, rgba(76, 43, 91, 0.88), rgba(46, 28, 57, 0.9) 58%, rgba(30, 21, 38, 0.94));
+  border: 1px solid rgba(192, 100, 255, 0.16);
   border-radius: 24px;
-  box-shadow: 0 25px 65px rgba(98, 52, 197, 0.28);
+  box-shadow: 0 26px 64px rgba(53, 27, 65, 0.28), 0 0 36px rgba(176, 91, 230, 0.07);
+  backdrop-filter: blur(22px) saturate(130%);
+
+  &::before {
+    position: absolute;
+    z-index: 3;
+    inset: -1px;
+    padding: 1px;
+    pointer-events: none;
+    content: '';
+    background: conic-gradient(
+      from var(--subscription-border-angle),
+      rgba(151, 91, 196, 0.1) 0deg,
+      rgba(151, 91, 196, 0.1) 258deg,
+      #eedcff 286deg,
+      #b467ed 310deg,
+      rgba(151, 91, 196, 0.1) 338deg
+    );
+    border-radius: inherit;
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    animation: border-turn 4.6s linear infinite;
+  }
 
   &::after {
     position: absolute;
-    top: 52px;
-    right: -130px;
+    top: -110px;
+    right: -90px;
     width: 260px;
     height: 260px;
     pointer-events: none;
     content: '';
-    background: radial-gradient(circle, rgba(255, 255, 255, 0.11), transparent 70%);
+    background: rgba(192, 100, 255, 0.08);
     border-radius: 50%;
+    box-shadow: 0 0 62px rgba(192, 100, 255, 0.09);
+    filter: blur(3px);
   }
 }
 
@@ -37,9 +73,9 @@
   i {
     width: 7px;
     height: 7px;
-    background: #62f0c0;
+    background: #c777fa;
     border-radius: 50%;
-    box-shadow: 0 0 12px #35d6a1;
+    box-shadow: 0 0 10px rgba(199, 119, 250, 0.7);
   }
 }
 
@@ -51,8 +87,9 @@
   height: 112px;
   place-items: center;
   margin: 34px 0 28px;
-  border: 1px solid rgba(255, 255, 255, 0.42);
+  border: 1px solid rgba(218, 176, 244, 0.34);
   border-radius: 50%;
+  box-shadow: 0 0 30px rgba(175, 104, 222, 0.07);
 
   &::before {
     position: absolute;
@@ -62,7 +99,7 @@
 
   &::before {
     inset: 10px;
-    border: 1px dashed rgba(255, 255, 255, 0.34);
+    border: 1px dashed rgba(224, 192, 242, 0.26);
     animation: orbit 18s linear infinite;
   }
 
@@ -71,7 +108,7 @@
 .orbitTrack {
   position: absolute;
   inset: 21px;
-  border: 1px solid rgba(255, 255, 255, 0.35);
+  border: 1px solid rgba(231, 206, 243, 0.28);
   border-radius: 50%;
 }
 
@@ -80,13 +117,13 @@
   width: 43px;
   height: 43px;
   place-items: center;
-  color: #6b35ca;
+  color: #673782;
   font-size: 1.15rem;
   font-weight: 850;
   letter-spacing: -.04em;
-  background: white;
+  background: #faf7fc;
   border-radius: 14px;
-  box-shadow: 0 10px 25px rgba(66, 31, 132, 0.25);
+  box-shadow: 0 10px 24px rgba(26, 13, 34, 0.25);
 }
 
 .copy {
@@ -103,7 +140,7 @@
   p {
     max-width: 300px;
     margin: 12px 0 0;
-    color: rgba(255, 255, 255, 0.74);
+    color: rgba(240, 232, 244, 0.66);
     font-size: .78rem;
     line-height: 1.55;
   }
@@ -119,15 +156,21 @@
 }
 
 .card .copyButton {
-  color: #42285b;
-  background: white;
-  border-color: white;
+  color: #3d2948;
+  background: rgba(251, 247, 253, 0.93);
+  border-color: rgba(255, 255, 255, 0.68);
 
   &:hover:not(:disabled) {
     color: white;
-    background: rgba(255, 255, 255, 0.16);
-    border-color: rgba(255, 255, 255, 0.58);
-    transform: none;
+    background: rgba(192, 100, 255, 0.12);
+    border-color: rgba(224, 185, 247, 0.42);
+  }
+
+
+  &:active:not(:disabled) {
+    color: white;
+    background: rgba(192, 100, 255, 0.22);
+    border-color: rgba(224, 185, 247, 0.54);
   }
 }
 
@@ -141,13 +184,19 @@
 
   &:hover:not(:disabled) {
     color: white;
-    background: rgba(255, 255, 255, 0.16);
-    border-color: rgba(255, 255, 255, 0.58);
-    transform: none;
+    background: rgba(192, 100, 255, 0.12);
+    border-color: rgba(224, 185, 247, 0.42);
+  }
+
+
+  &:active:not(:disabled) {
+    background: rgba(192, 100, 255, 0.22);
+    border-color: rgba(224, 185, 247, 0.54);
   }
 }
 
 @keyframes orbit { to { transform: rotate(360deg); } }
+@keyframes border-turn { to { --subscription-border-angle: 360deg; } }
 
 @media (max-width: 900px) {
   .card { min-height: 390px; }
@@ -158,4 +207,8 @@
   .actions { flex-direction: column; }
   .card .copyButton, .card .qrButton { width: 100%; }
   .card .qrButton { min-height: 42px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card::before, .orbit::before { animation: none; }
 }
