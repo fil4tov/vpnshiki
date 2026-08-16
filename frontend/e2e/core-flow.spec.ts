@@ -39,6 +39,17 @@ test('administrator manages a user account until deletion', async ({ page }) => 
   await page.getByRole('button', { name: 'Войти' }).click();
   await expect(page.getByRole('heading', { name: new RegExp(`Привет, ${adminName}`) })).toBeVisible();
 
+  const vpnSection = page.getByRole('region', { name: 'Ваш VPN' });
+  const subscriptionCard = vpnSection.getByRole('article', { name: 'Единая подписка' });
+  await expect(subscriptionCard).toBeVisible();
+  await expect(vpnSection.getByText('VLESS', { exact: true })).toBeVisible();
+  await expect(vpnSection.getByText('Hysteria2', { exact: true })).toBeVisible();
+  await subscriptionCard.getByRole('button', { name: 'Скопировать ссылку' }).click();
+  await expect(page.getByRole('status')).toContainText('Ссылка скопирована');
+  await subscriptionCard.getByRole('button', { name: 'Показать QR общей подписки' }).click();
+  await expect(page.getByRole('dialog', { name: 'Общая подписка' })).toBeVisible();
+  await page.getByRole('button', { name: 'Закрыть' }).click();
+
   await page.getByRole('button', { name: 'Включить светлую тему' }).click();
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
   await page.getByRole('link', { name: 'Админ-панель' }).click();
@@ -53,6 +64,11 @@ test('administrator manages a user account until deletion', async ({ page }) => 
   await expect(page.getByText(memberName)).toBeVisible();
 
   await logout();
+  let blockedVpnRequests = 0;
+  const countBlockedVpnRequests = (request: { url(): string }) => {
+    if (request.url().endsWith('/api/users/me/vpn')) blockedVpnRequests += 1;
+  };
+  page.on('request', countBlockedVpnRequests);
   await page.getByLabel('Имя').fill(memberName);
   await page.getByLabel('Пароль').fill(initialPassword);
   await page.getByRole('button', { name: 'Войти' }).click();
@@ -87,7 +103,10 @@ test('administrator manages a user account until deletion', async ({ page }) => 
   await page.getByLabel('Пароль').fill(nextPassword);
   await page.getByRole('button', { name: 'Войти' }).click();
   await expect(page.getByText('Аккаунт заблокирован')).toBeVisible();
+  await expect(page.getByText('VPN доступен только для активного аккаунта')).toBeVisible();
   await expect(page.getByRole('switch', { name: 'Участие в программе' })).toHaveCount(0);
+  expect(blockedVpnRequests).toBe(0);
+  page.off('request', countBlockedVpnRequests);
 
   await logout();
   await page.getByLabel('Имя').fill(adminName);

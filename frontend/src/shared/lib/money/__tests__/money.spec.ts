@@ -1,4 +1,4 @@
-import { formatMoney } from '../money';
+import { formatMoney, isNegativeMoney } from '../money';
 
 describe('formatMoney', () => {
   it('formats exact API values as Russian rubles', () => {
@@ -10,3 +10,11 @@ describe('formatMoney', () => {
   });
 });
 
+describe('isNegativeMoney', () => {
+  it('recognizes only finite amounts below zero', () => {
+    expect(isNegativeMoney('-125.50')).toBe(true);
+    expect(isNegativeMoney('0.00')).toBe(false);
+    expect(isNegativeMoney('-0.00')).toBe(false);
+    expect(isNegativeMoney('invalid')).toBe(false);
+  });
+});

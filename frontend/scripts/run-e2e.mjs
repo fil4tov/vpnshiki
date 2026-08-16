@@ -8,6 +8,7 @@ const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
 const frontendDirectory = path.resolve(scriptDirectory, '..');
 const projectDirectory = path.resolve(frontendDirectory, '..');
 const composeFile = path.join(projectDirectory, 'compose.yaml');
+const e2eComposeFile = path.join(projectDirectory, 'compose.e2e.yaml');
 const projectName = 'vpnshiki-e2e';
 const require = createRequire(import.meta.url);
 const playwrightCli = require.resolve('@playwright/test/cli');
@@ -27,7 +28,12 @@ const testEnvironment = {
   E2E_BASE_URL: `http://127.0.0.1:${process.env.E2E_FRONTEND_PORT ?? '18080'}`,
 };
 
-const composeArguments = ['compose', '--project-name', projectName, '--file', composeFile];
+const composeArguments = [
+  'compose',
+  '--project-name', projectName,
+  '--file', composeFile,
+  '--file', e2eComposeFile,
+];
 
 function run(command, args, options = {}) {
   const result = spawnSync(command, args, {

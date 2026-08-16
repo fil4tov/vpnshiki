@@ -1,0 +1,20 @@
+services:
+  mock-xui:
+    image: python:3.13-alpine
+    volumes:
+      - ./backend/tests/mock_xui_server.py:/app/mock_xui_server.py:ro
+    command: ["python", "/app/mock_xui_server.py"]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9084/health')"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+
+  backend:
+    environment:
+      X_UI_API_URL: http://mock-xui:9084/panel/api
+      X_UI_TOKEN: e2e-provider-token
+      X_UI_SUBSCRIPTION_URL: https://subscription.example.test/gatewaysubru
+    depends_on:
+      mock-xui:
+        condition: service_healthy

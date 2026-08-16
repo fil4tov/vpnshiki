@@ -1,0 +1,61 @@
+.button {
+  position: relative;
+  transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
+  will-change: transform;
+
+  &:hover:not(:disabled) {
+    color: var(--text);
+    background: var(--accent-soft);
+    border-color: var(--border-strong);
+    transform: none;
+  }
+}
+
+.copied {
+  animation: copy-press 160ms cubic-bezier(.2, .8, .25, 1);
+}
+
+.icon {
+  position: relative;
+  display: inline-grid;
+  width: 1em;
+  height: 1em;
+  flex: 0 0 auto;
+  place-items: center;
+
+  svg {
+    position: absolute;
+    display: block;
+    transition: opacity 180ms ease, transform 240ms cubic-bezier(.2, .8, .25, 1);
+  }
+}
+
+.copyIcon {
+  opacity: 1;
+  transform: scale(1) rotate(0deg);
+}
+
+.checkIcon {
+  opacity: 0;
+  transform: scale(.55) rotate(-24deg);
+}
+
+.copied .copyIcon {
+  opacity: 0;
+  transform: scale(.55) rotate(24deg);
+}
+
+.copied .checkIcon {
+  opacity: 1;
+  transform: scale(1.08) rotate(0deg);
+}
+
+@keyframes copy-press {
+  0%, 100% { transform: translateY(0); }
+  45% { transform: translateY(3px) scale(.985); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .copied { animation: none; }
+  .icon svg { transition: none; }
+}

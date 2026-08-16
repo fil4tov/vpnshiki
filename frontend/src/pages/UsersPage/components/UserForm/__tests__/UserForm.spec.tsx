@@ -10,6 +10,10 @@ describe('UserForm', () => {
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     render(<UserForm onCancel={() => undefined} onSubmit={onSubmit} />);
 
+    const accountStatus = screen.getByRole('combobox', { name: 'Статус аккаунта' });
+    const role = screen.getByRole('combobox', { name: 'Роль' });
+    expect(accountStatus.compareDocumentPosition(role) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
     await user.type(screen.getByLabelText('Имя'), 'Антон');
     await user.type(screen.getByLabelText('Начальный пароль'), 'strong-password');
     await user.click(screen.getByRole('combobox', { name: 'Статус аккаунта' }));

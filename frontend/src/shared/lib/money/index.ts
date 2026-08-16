@@ -1,2 +1,1 @@
-export { formatMoney } from './money';
-
+export { formatMoney, isNegativeMoney } from './money';

@@ -32,6 +32,7 @@ tbody tr:hover { background: var(--surface-muted); }
 .person strong { font-size: .84rem; }
 .person small { color: var(--text-muted); font-size: .68rem; }
 .money { font-family: var(--font-data); font-size: .78rem; white-space: nowrap; }
+.negativeMoney { color: var(--danger); }
 .rowActions { display: flex; justify-content: flex-end; gap: 6px; }
 .rowActions button { display: grid; width: 34px; height: 34px; place-items: center; color: var(--text-muted); cursor: pointer; background: transparent; border: 1px solid transparent; border-radius: 9px; }
 .rowActions button:hover { color: var(--text); background: var(--surface-muted); border-color: var(--border); }

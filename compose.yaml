@@ -26,15 +26,14 @@ services:
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       SESSION_DAYS: ${SESSION_DAYS:-30}
       COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      X_UI_API_URL: ${X_UI_API_URL:-}
+      X_UI_TOKEN: ${X_UI_TOKEN:-}
+      X_UI_SUBSCRIPTION_URL: ${X_UI_SUBSCRIPTION_URL:-https://85.208.87.191:8888/gatewaysubru}
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     depends_on:
       postgres:
         condition: service_healthy
-    command:
-      - sh
-      - -c
-      - alembic upgrade head && exec uvicorn app.main:app --host 0.0.0.0 --port 8000
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')"]
       interval: 10s
@@ -55,4 +54,3 @@ services:
 
 volumes:
   postgres_data:
-

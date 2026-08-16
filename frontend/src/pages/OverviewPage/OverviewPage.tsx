@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 
 import { getMyDailyCharge, myDailyChargeKey, useUserStore } from '#entities/user';
 
-import { ParticipationPulse } from './components';
+import { ParticipationPulse, VpnAccessPanel } from './components';
 import styles from './OverviewPage.module.scss';
 
 export function OverviewPage() {
@@ -21,6 +21,7 @@ export function OverviewPage() {
         negativeBalanceLimit={user.negative_balance_limit}
         dailyCharge={dailyChargeQuery.isPending ? undefined : dailyChargeQuery.data?.daily_charge ?? null}
       />
+      <VpnAccessPanel accountStatus={user.account_status} />
     </div>
   );
 }

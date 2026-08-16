@@ -8,3 +8,7 @@ export function formatMoney(value: string): string {
   }).format(amount);
 }
 
+export function isNegativeMoney(value: string): boolean {
+  const amount = Number(value);
+  return Number.isFinite(amount) && amount < 0;
+}

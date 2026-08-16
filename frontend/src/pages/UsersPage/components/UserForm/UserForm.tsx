@@ -89,21 +89,6 @@ export function UserForm({ user, onCancel, onSubmit }: UserFormProps) {
       <div className={styles.selectRow}>
         <Controller
           control={control}
-          name="role"
-          render={({ field }) => (
-            <FieldSelect
-              ref={field.ref}
-              name={field.name}
-              label="Роль"
-              options={roleOptions}
-              value={field.value}
-              onChange={field.onChange}
-              onBlur={field.onBlur}
-            />
-          )}
-        />
-        <Controller
-          control={control}
           name="accountStatus"
           render={({ field }) => (
             <FieldSelect
@@ -113,6 +98,21 @@ export function UserForm({ user, onCancel, onSubmit }: UserFormProps) {
               options={statusOptions}
               value={field.value}
               hint={statusDescriptions[accountStatus]}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+            />
+          )}
+        />
+        <Controller
+          control={control}
+          name="role"
+          render={({ field }) => (
+            <FieldSelect
+              ref={field.ref}
+              name={field.name}
+              label="Роль"
+              options={roleOptions}
+              value={field.value}
               onChange={field.onChange}
               onBlur={field.onBlur}
             />

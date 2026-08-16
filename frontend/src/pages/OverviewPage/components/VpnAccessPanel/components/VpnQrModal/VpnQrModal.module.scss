@@ -1,0 +1,5 @@
+.content { display: grid; justify-items: center; text-align: center; }
+.content > p { margin: -4px 0 20px; color: var(--text-muted); font-size: .82rem; line-height: 1.5; }
+.qr { width: min(100%, 410px); padding: 13px; margin-bottom: 20px; line-height: 0; background: white; border-radius: 18px; box-shadow: 0 12px 32px rgba(0, 0, 0, .18); }
+.qr svg { width: 100%; height: auto; }
+.content small { max-width: 360px; margin-top: 12px; color: var(--text-muted); font-size: .67rem; line-height: 1.45; }

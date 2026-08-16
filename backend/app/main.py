@@ -16,6 +16,7 @@ from app.db import SessionFactory
 from app.errors import ApiError
 from app.tariff_plans import router as tariff_plans_router
 from app.users.router import router as users_router
+from app.vpn_access import router as vpn_access_router
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,7 @@ app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(admin_router)
 app.include_router(tariff_plans_router)
+app.include_router(vpn_access_router)
 
 
 @app.exception_handler(ApiError)

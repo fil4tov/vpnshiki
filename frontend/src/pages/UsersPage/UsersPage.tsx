@@ -12,7 +12,7 @@ import {
   useUserStore,
 } from '#entities/user';
 import type { AdminUserPayload, AdminUserUpdatePayload, User } from '#entities/user';
-import { formatMoney } from '#shared/lib/money';
+import { formatMoney, isNegativeMoney } from '#shared/lib/money';
 import { Badge, Button, LoadingState, Modal, Surface } from '#shared/ui';
 
 import { DeleteUserConfirmation, ResetPasswordForm, UserForm } from './components';
@@ -99,7 +99,12 @@ export function UsersPage() {
               <tbody>{users.map((user) => (
                 <tr key={user.id}>
                   <td data-label="Пользователь"><div className={styles.person}><span>{user.name.slice(0, 1).toUpperCase()}</span><div><strong>{user.name}</strong><small>{user.role === 'admin' ? 'Администратор' : 'Участник'}</small></div></div></td>
-                  <td data-label="Баланс" className={styles.money}>{formatMoney(user.balance)}</td>
+                  <td
+                    data-label="Баланс"
+                    className={`${styles.money} ${isNegativeMoney(user.balance) ? styles.negativeMoney : ''}`}
+                  >
+                    {formatMoney(user.balance)}
+                  </td>
                   <td data-label="Лимит" className={styles.money}>{formatMoney(user.negative_balance_limit)}</td>
                   <td data-label="Статус"><Badge tone={user.account_status === 'blocked' ? 'danger' : user.account_status === 'active' ? 'positive' : 'warning'}>{user.account_status === 'blocked' ? 'Заблокирован' : user.account_status === 'active' ? 'Активен' : 'Приостановлен'}</Badge></td>
                   <td className={styles.rowActions}>

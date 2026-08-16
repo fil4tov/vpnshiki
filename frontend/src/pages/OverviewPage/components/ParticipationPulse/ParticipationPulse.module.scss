@@ -14,6 +14,10 @@
 .dailyCharge span { display: inline-flex; align-items: center; gap: 7px; color: var(--positive); font-size: .7rem; }
 .dailyCharge span i { width: 5px; height: 5px; flex: 0 0 auto; background: currentColor; border-radius: 50%; box-shadow: 0 0 10px currentColor; }
 .dailyCharge strong { color: var(--text); font-family: var(--font-data); font-size: 1.08rem; font-weight: 500; letter-spacing: -.035em; white-space: nowrap; }
+.inactiveCharge span, .inactiveCharge strong { color: var(--text-muted); }
+.inactiveCharge span i { box-shadow: 0 0 7px color-mix(in srgb, var(--text-muted) 35%, transparent); }
+.dailyChargeSkeleton { position: relative; width: min(248px,100%); overflow: hidden; }
+.dailyChargeSkeleton::after { position: absolute; inset: 0; content: ''; background: linear-gradient(105deg,transparent 20%,var(--surface-muted) 42%,color-mix(in srgb,var(--text-muted) 13%,transparent) 50%,var(--surface-muted) 58%,transparent 80%); transform: translateX(-100%); animation: charge-shimmer 1.35s ease-in-out infinite; }
 
 .mainContent { position: relative; z-index: 1; display: grid; grid-template-columns: 130px minmax(230px,1fr) minmax(270px,.9fr); align-items: center; gap: 32px; padding-top: 30px; }
 .orbit { position: relative; display: grid; width: 118px; height: 118px; place-items: center; border: 1px solid color-mix(in srgb,var(--pulse) 42%,transparent); border-radius: 50%; box-shadow: 0 0 45px color-mix(in srgb,var(--pulse) 14%,transparent),inset 0 0 30px color-mix(in srgb,var(--pulse) 8%,transparent); }
@@ -28,9 +32,15 @@
 .balance { min-width: 0; display: grid; justify-items: end; gap: 8px; text-align: right; }
 .balance span { color: var(--text-muted); font-size: .69rem; }
 .balance strong { max-width: 100%; font-family: var(--font-data); font-size: clamp(1.8rem,4vw,3rem); line-height: 1.1; letter-spacing: -.055em; overflow-wrap: anywhere; }
+.balance .negativeBalance { color: var(--danger); }
 .balance small { color: var(--text-muted); font-size: .74rem; }
 
 @keyframes orbit { to { transform: rotate(360deg); } }
+@keyframes charge-shimmer { to { transform: translateX(100%); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .dailyChargeSkeleton::after { animation: none; transform: none; }
+}
 
 @media (max-width: 820px) {
   .mainContent { grid-template-columns: 115px minmax(0,1fr); }

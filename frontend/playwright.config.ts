@@ -7,8 +7,8 @@ export default defineConfig({
   reporter: 'html',
   use: {
     baseURL: process.env.E2E_BASE_URL ?? 'http://127.0.0.1',
+    permissions: ['clipboard-read', 'clipboard-write'],
     trace: 'on-first-retry',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
 });
-
