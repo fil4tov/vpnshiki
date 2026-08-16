@@ -1,0 +1,19 @@
+.button {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+  color: var(--text-muted);
+  font-size: .72rem;
+  cursor: pointer;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+.button:hover:not(:disabled) { color: var(--text); background: var(--accent-soft); border-color: var(--border-strong); }
+.button:active:not(:disabled) { color: var(--text); background: color-mix(in srgb, var(--accent) 24%, transparent); border-color: var(--border-strong); }
+.button:focus-visible { outline: none; box-shadow: var(--focus); }
+.button:disabled { cursor: not-allowed; opacity: .45; }
+.button svg { flex: 0 0 auto; }

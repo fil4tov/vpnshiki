@@ -1,0 +1,43 @@
+.periods { display: grid; gap: 10px; }
+.period { overflow: hidden; background: color-mix(in srgb, var(--canvas) 16%, transparent); border: 1px solid var(--border); border-radius: 14px; }
+.periodButton {
+  width: 100%;
+  min-height: 66px;
+  display: grid;
+  grid-template-columns: 1fr auto 24px;
+  align-items: center;
+  gap: 14px;
+  padding: 0 16px;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  transition: background 160ms ease;
+}
+.periodButton:hover { background: var(--surface-muted); }
+.periodButton:active { background: var(--accent-soft); }
+.periodButton:focus-visible { outline: none; box-shadow: inset var(--focus); }
+.periodButton > svg { color: var(--text-muted); transition: transform 160ms ease; }
+.expanded .periodButton > svg { transform: rotate(180deg); }
+.periodTitle, .periodTotal { display: block; }
+.periodTitle strong { display: block; font-size: .86rem; }
+.periodTitle small, .periodTotal small { display: block; margin-top: 3px; color: var(--text-muted); font-size: .66rem; }
+.periodTotal { text-align: right; }
+.periodTotal strong { display: block; font-family: var(--font-data); font-size: .8rem; font-weight: 400; }
+.rows { border-top: 1px solid var(--border); }
+.row { display: grid; grid-template-columns: 104px 1fr auto; gap: 14px; padding: 12px 16px; border-top: 1px solid color-mix(in srgb, var(--border) 62%, transparent); }
+.row:first-child { border-top: 0; }
+.row time { color: var(--text-muted); font-size: .7rem; }
+.row span { min-width: 0; overflow: hidden; font-size: .7rem; text-overflow: ellipsis; white-space: nowrap; }
+.row strong { font-family: var(--font-data); font-size: .72rem; font-weight: 400; white-space: nowrap; }
+
+@media (max-width: 520px) {
+  .periodButton { grid-template-columns: 1fr auto 18px; gap: 9px; padding-inline: 13px; }
+  .row { grid-template-columns: 82px 1fr; gap: 7px 12px; padding-inline: 13px; }
+  .row strong { grid-column: 2; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .periodButton, .periodButton > svg { transition-duration: .01ms; }
+}

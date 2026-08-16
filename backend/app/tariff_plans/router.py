@@ -4,10 +4,16 @@ from fastapi import APIRouter, status
 
 from app.auth.dependencies import CurrentAdmin, Database
 
-from .schemas import TariffPlanCreate, TariffPlanRead, TariffPlanUpdate
+from .schemas import (
+    TariffPlanBillingRunRead,
+    TariffPlanCreate,
+    TariffPlanRead,
+    TariffPlanUpdate,
+)
 from .service import (
     create_tariff_plan,
     delete_tariff_plan,
+    list_tariff_plan_billing_runs,
     list_tariff_plans,
     update_tariff_plan,
 )
@@ -18,6 +24,15 @@ router = APIRouter(prefix="/api/admin/tariff-plans", tags=["admin", "tariff-plan
 @router.get("", response_model=list[TariffPlanRead])
 async def list_plans(_admin: CurrentAdmin, db: Database) -> list[TariffPlanRead]:
     return await list_tariff_plans(db)
+
+
+@router.get("/{plan_id}/billing-history", response_model=list[TariffPlanBillingRunRead])
+async def list_plan_billing_history(
+    plan_id: UUID,
+    _admin: CurrentAdmin,
+    db: Database,
+) -> list[TariffPlanBillingRunRead]:
+    return await list_tariff_plan_billing_runs(db, plan_id)
 
 
 @router.post("", response_model=TariffPlanRead, status_code=status.HTTP_201_CREATED)

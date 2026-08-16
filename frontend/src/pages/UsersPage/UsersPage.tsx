@@ -13,7 +13,7 @@ import {
 } from '#entities/user';
 import type { AdminUser, AdminUserPayload, AdminUserUpdatePayload, User } from '#entities/user';
 import { formatMoney, isNegativeMoney } from '#shared/lib/money';
-import { Badge, Button, LoadingState, Modal, Surface } from '#shared/ui';
+import { Badge, Button, LoadingState, Modal, Surface, TableActionButton } from '#shared/ui';
 
 import { ChargeHistoryModal, DeleteUserConfirmation, ResetPasswordForm, UserForm } from './components';
 import styles from './UsersPage.module.scss';
@@ -110,10 +110,10 @@ export function UsersPage() {
                   <td data-label="Лимит" className={styles.money}>{formatMoney(user.negative_balance_limit)}</td>
                   <td data-label="Всего списаний" className={styles.money}>{formatMoney(user.total_charged)}</td>
                   <td data-label="История списаний" className={styles.historyCell}>
-                    <button type="button" onClick={() => setHistoryUser(user)} aria-label={`Открыть историю списаний ${user.name}`}>
+                    <TableActionButton onClick={() => setHistoryUser(user)} aria-label={`Открыть историю списаний ${user.name}`}>
                       <FiClock aria-hidden="true" />
                       <span>Открыть</span>
-                    </button>
+                    </TableActionButton>
                   </td>
                   <td className={styles.rowActions}>
                     <button type="button" onClick={() => setEditing(user)} aria-label={`Редактировать ${user.name}`}><FiEdit3 /></button>

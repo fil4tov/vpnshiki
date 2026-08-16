@@ -46,6 +46,9 @@ describe('ChargeHistoryModal', () => {
     );
 
     expect(await screen.findByText('TP_01.08.2026')).toBeInTheDocument();
+    const title = screen.getByRole('heading', { name: 'История списаний' });
+    const userName = screen.getByText('moxxie');
+    expect(title.compareDocumentPosition(userName) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByText('96,78 ₽')).toBeInTheDocument();
     expect(screen.queryByText('TP_01.07.2026')).not.toBeInTheDocument();
 

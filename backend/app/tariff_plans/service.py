@@ -8,11 +8,12 @@ from sqlalchemy import func, or_, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.billing.models import BillingRun, BillingRunStatus
 from app.errors import ApiError
 from app.users.models import AccountStatus, User
 
 from .models import TariffPlan
-from .schemas import TariffPlanRead, TariffPlanStatus
+from .schemas import TariffPlanBillingRunRead, TariffPlanRead, TariffPlanStatus
 
 MOSCOW = ZoneInfo("Europe/Moscow")
 SCHEDULE_LOCK_ID = 846_202_608_15
@@ -86,6 +87,32 @@ async def list_tariff_plans(db: AsyncSession) -> list[TariffPlanRead]:
     plans = (await db.scalars(select(TariffPlan).order_by(TariffPlan.start_date))).all()
     today = moscow_today()
     return [serialize_plan(plan, today) for plan in plans]
+
+
+async def list_tariff_plan_billing_runs(
+    db: AsyncSession,
+    plan_id: UUID,
+) -> list[TariffPlanBillingRunRead]:
+    plan = await db.get(TariffPlan, plan_id)
+    if plan is None:
+        raise ApiError(
+            status_code=404,
+            code="tariff_plan_not_found",
+            message="Тарифный план не найден",
+        )
+    runs = (
+        await db.scalars(
+            select(BillingRun)
+            .where(
+                BillingRun.tariff_plan_id == plan_id,
+                BillingRun.status == BillingRunStatus.COMPLETED.value,
+                BillingRun.daily_charge.is_not(None),
+                BillingRun.active_users_count > 0,
+            )
+            .order_by(BillingRun.billing_date.desc())
+        )
+    ).all()
+    return [TariffPlanBillingRunRead.model_validate(run) for run in runs]
 
 
 async def get_user_daily_charge(db: AsyncSession, user: User) -> Decimal | None:

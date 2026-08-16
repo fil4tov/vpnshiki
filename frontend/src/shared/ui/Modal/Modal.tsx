@@ -11,11 +11,17 @@ interface ModalProps {
   children: ReactNode;
   onClose: () => void;
   className?: string;
-  eyebrow?: string;
-  description?: string;
+  description?: ReactNode;
 }
 
-export function Modal({ open, title, children, onClose, className = '', eyebrow, description }: ModalProps) {
+export function Modal({
+  open,
+  title,
+  children,
+  onClose,
+  className = '',
+  description,
+}: ModalProps) {
   const titleId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
   const modalRef = useRef<HTMLElement>(null);
@@ -62,10 +68,15 @@ export function Modal({ open, title, children, onClose, className = '', eyebrow,
   if (!open) return null;
   return createPortal(
     <div className={styles.backdrop} onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
-      <section ref={modalRef} className={`${styles.modal} ${className}`} role="dialog" aria-modal="true" aria-labelledby={titleId}>
+      <section
+        ref={modalRef}
+        className={`${styles.modal} ${className}`}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+      >
         <header className={styles.header}>
           <div className={styles.headerCopy}>
-            {eyebrow && <p className={styles.eyebrow}>{eyebrow}</p>}
             <h2 id={titleId}>{title}</h2>
             {description && <p className={styles.description}>{description}</p>}
           </div>

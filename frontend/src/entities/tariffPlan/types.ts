@@ -17,4 +17,11 @@ export interface TariffPlanPayload {
   start_date: string;
 }
 
+export interface TariffPlanBillingRun {
+  id: string;
+  billing_date: string;
+  daily_charge: string;
+  active_users_count: number;
+}
+
 export type TariffPlanUpdatePayload = Partial<TariffPlanPayload>;

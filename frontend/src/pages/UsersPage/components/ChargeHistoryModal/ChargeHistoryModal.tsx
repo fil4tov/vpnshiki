@@ -1,6 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { FiChevronDown } from 'react-icons/fi';
 
 import {
   getUserCharges,
@@ -8,7 +7,8 @@ import {
 } from '#entities/user';
 import type { AdminUser, UserCharge } from '#entities/user';
 import { formatMoney } from '#shared/lib/money';
-import { Button, LoadingState, Modal } from '#shared/ui';
+import { Button, HistorySummary, LoadingState, Modal, MonthlyHistory } from '#shared/ui';
+import type { MonthlyHistoryGroup } from '#shared/ui';
 
 import styles from './ChargeHistoryModal.module.scss';
 
@@ -28,13 +28,6 @@ const dateFormatter = new Intl.DateTimeFormat('ru-RU', {
   month: 'long',
   timeZone: MOSCOW_TIME_ZONE,
 });
-
-interface ChargeGroup {
-  key: string;
-  label: string;
-  total: string;
-  charges: UserCharge[];
-}
 
 function capitalize(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
@@ -56,7 +49,7 @@ function getMonthKey(createdAt: string) {
   return `${year}-${month}`;
 }
 
-function groupCharges(charges: UserCharge[]): ChargeGroup[] {
+function groupCharges(charges: UserCharge[]): MonthlyHistoryGroup[] {
   const groups = new Map<string, UserCharge[]>();
   charges.forEach((charge) => {
     const key = getMonthKey(charge.created_at);
@@ -72,40 +65,38 @@ function groupCharges(charges: UserCharge[]): ChargeGroup[] {
       label: capitalize(
         monthLabelFormatter.format(new Date(monthCharges[0].created_at)).replace(/\s+г\.$/, ''),
       ),
-      total: (totalInCents / 100).toFixed(2),
-      charges: monthCharges,
+      countLabel: formatChargeCount(monthCharges.length),
+      total: formatMoney((totalInCents / 100).toFixed(2)),
+      rows: monthCharges.map((charge) => ({
+        id: charge.id,
+        dateTime: charge.created_at,
+        dateLabel: dateFormatter.format(new Date(charge.created_at)),
+        description: charge.tariff_plan_name,
+        amount: `−${formatMoney(charge.amount)}`,
+      })),
     };
   });
 }
 
 export function ChargeHistoryModal({ user, onClose }: { user: AdminUser; onClose: () => void }) {
-  const [openMonth, setOpenMonth] = useState<string | null>();
   const historyQuery = useQuery({
     queryKey: userChargesKey(user.id),
     queryFn: () => getUserCharges(user.id),
   });
   const groups = useMemo(() => groupCharges(historyQuery.data ?? []), [historyQuery.data]);
-  const expandedMonth = openMonth === undefined ? groups[0]?.key : openMonth;
 
   return (
     <Modal
       open
       title="История списаний"
-      eyebrow={user.name}
-      description="Все ежедневные списания по тарифным планам"
+      description={<span className={styles.subject}>{user.name}</span>}
       className={styles.modal}
       onClose={onClose}
     >
-      <div className={styles.summary}>
-        <div>
-          <span>Списано за всё время</span>
-          <strong>{formatMoney(user.total_charged)}</strong>
-        </div>
-        <div>
-          <span>Период</span>
-          <strong>{groups.length} мес.</strong>
-        </div>
-      </div>
+      <HistorySummary items={[
+        { label: 'Списано за всё время', value: formatMoney(user.total_charged), accent: true },
+        { label: 'Период', value: `${groups.length} мес.` },
+      ]} />
 
       {historyQuery.isLoading ? (
         <LoadingState label="Загружаем историю списаний" />
@@ -119,44 +110,7 @@ export function ChargeHistoryModal({ user, onClose }: { user: AdminUser; onClose
           <p>У пользователя пока не было списаний.</p>
         </div>
       ) : (
-        <div className={styles.periods}>
-          {groups.map((group) => {
-            const expanded = expandedMonth === group.key;
-            const panelId = `charge-period-${user.id}-${group.key}`;
-            return (
-              <section key={group.key} className={`${styles.period} ${expanded ? styles.expanded : ''}`}>
-                <button
-                  className={styles.periodButton}
-                  type="button"
-                  aria-expanded={expanded}
-                  aria-controls={panelId}
-                  onClick={() => setOpenMonth(expanded ? null : group.key)}
-                >
-                  <span className={styles.periodTitle}>
-                    <strong>{group.label}</strong>
-                    <small>{formatChargeCount(group.charges.length)}</small>
-                  </span>
-                  <span className={styles.periodTotal}>
-                    <strong>{formatMoney(group.total)}</strong>
-                    <small>за период</small>
-                  </span>
-                  <FiChevronDown aria-hidden="true" />
-                </button>
-                {expanded && (
-                  <div id={panelId} className={styles.rows}>
-                    {group.charges.map((charge) => (
-                      <div key={charge.id} className={styles.row}>
-                        <time dateTime={charge.created_at}>{dateFormatter.format(new Date(charge.created_at))}</time>
-                        <span title={charge.tariff_plan_name}>{charge.tariff_plan_name}</span>
-                        <strong>−{formatMoney(charge.amount)}</strong>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </section>
-            );
-          })}
-        </div>
+        <MonthlyHistory groups={groups} />
       )}
     </Modal>
   );

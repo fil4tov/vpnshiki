@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { FiCalendar, FiEdit3, FiPlus, FiTrash2 } from 'react-icons/fi';
+import { FiCalendar, FiClock, FiEdit3, FiPlus, FiTrash2 } from 'react-icons/fi';
 
 import {
   createTariffPlan,
@@ -13,9 +13,14 @@ import {
 import type { TariffPlan, TariffPlanPayload } from '#entities/tariffPlan';
 import { adminUsersKey, getUsers } from '#entities/user';
 import { formatMoney } from '#shared/lib/money';
-import { Badge, Button, LoadingState, Modal, Surface } from '#shared/ui';
+import { Badge, Button, LoadingState, Modal, Surface, TableActionButton } from '#shared/ui';
 
-import { CurrentTariffCard, DeleteTariffPlanConfirmation, TariffPlanForm } from './components';
+import {
+  CurrentTariffCard,
+  DeleteTariffPlanConfirmation,
+  TariffPlanBillingHistoryModal,
+  TariffPlanForm,
+} from './components';
 import styles from './TariffPlansPage.module.scss';
 
 const statusView = {
@@ -29,6 +34,7 @@ export function TariffPlansPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<TariffPlan | null>(null);
   const [deleting, setDeleting] = useState<TariffPlan | null>(null);
+  const [historyPlan, setHistoryPlan] = useState<TariffPlan | null>(null);
   const plansQuery = useQuery({ queryKey: tariffPlansKey, queryFn: getTariffPlans });
   const plans = plansQuery.data ?? [];
   const currentPlan = plans.find((plan) => plan.status === 'active');
@@ -107,7 +113,7 @@ export function TariffPlansPage() {
           <div className={styles.tableWrap}>
             <table>
               <thead>
-                <tr><th>Название</th><th>Сумма за месяц</th><th>Начало</th><th>Окончание</th><th>Статус</th><th><span className={styles.srOnly}>Действия</span></th></tr>
+                <tr><th>Название</th><th>Сумма за месяц</th><th>Начало</th><th>Окончание</th><th>Статус</th><th>История списаний</th><th><span className={styles.srOnly}>Действия</span></th></tr>
               </thead>
               <tbody>{displayedPlans.map((plan) => {
                 const view = statusView[plan.status];
@@ -123,6 +129,15 @@ export function TariffPlansPage() {
                     <td data-label="Начало" className={styles.date}><time dateTime={plan.start_date}>{formatCalendarDate(plan.start_date)}</time></td>
                     <td data-label="Окончание" className={styles.date}>{plan.end_date ? <time dateTime={plan.end_date}>{formatCalendarDate(plan.end_date)}</time> : 'Бессрочно'}</td>
                     <td data-label="Статус"><Badge tone={view.tone}>{view.label}</Badge></td>
+                    <td data-label="История списаний">
+                      <TableActionButton
+                        aria-label={`Открыть историю списаний ${plan.name}`}
+                        onClick={() => setHistoryPlan(plan)}
+                      >
+                        <FiClock aria-hidden="true" />
+                        <span>Открыть</span>
+                      </TableActionButton>
+                    </td>
                     <td className={styles.rowActions}>
                       <button
                         type="button"
@@ -157,6 +172,9 @@ export function TariffPlansPage() {
       <Modal open={Boolean(deleting)} title="Удалить тарифный план" onClose={() => setDeleting(null)}>
         {deleting && <DeleteTariffPlanConfirmation name={deleting.name} onCancel={() => setDeleting(null)} onConfirm={confirmDelete} />}
       </Modal>
+      {historyPlan && (
+        <TariffPlanBillingHistoryModal plan={historyPlan} onClose={() => setHistoryPlan(null)} />
+      )}
     </div>
   );
 }

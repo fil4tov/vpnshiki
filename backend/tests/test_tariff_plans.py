@@ -1,8 +1,11 @@
-from datetime import date
+from datetime import UTC, date, datetime
+from decimal import Decimal
+from uuid import UUID
 
 from httpx import AsyncClient
 
 from app.auth.security import hash_password
+from app.billing.models import BillingRun, BillingRunStatus
 from app.users.models import User
 
 
@@ -134,6 +137,61 @@ async def test_end_date_is_inclusive_for_status(client, monkeypatch) -> None:
     freeze_moscow_day(monkeypatch, date(2026, 8, 16))
     plans = (await client.get("/api/admin/tariff-plans")).json()
     assert [plan["status"] for plan in plans] == ["completed", "active"]
+
+
+async def test_tariff_plan_billing_history_contains_daily_rate_and_user_count(
+    client,
+    session_factory,
+    monkeypatch,
+) -> None:
+    freeze_moscow_day(monkeypatch, date(2026, 8, 16))
+    await login(client)
+    plan = (await create_plan(client, "2000.00", "2026-08-01")).json()
+    plan_id = UUID(plan["id"])
+    async with session_factory() as db:
+        db.add_all(
+            [
+                BillingRun(
+                    billing_date=date(2026, 8, 16),
+                    tariff_plan_id=plan_id,
+                    status=BillingRunStatus.COMPLETED.value,
+                    active_users_count=2,
+                    charged_users_count=2,
+                    daily_charge=Decimal("32.26"),
+                    completed_at=datetime.now(UTC),
+                ),
+                BillingRun(
+                    billing_date=date(2026, 8, 15),
+                    tariff_plan_id=plan_id,
+                    status=BillingRunStatus.COMPLETED.value,
+                    active_users_count=1,
+                    charged_users_count=1,
+                    daily_charge=Decimal("64.52"),
+                    completed_at=datetime.now(UTC),
+                ),
+                BillingRun(
+                    billing_date=date(2026, 8, 14),
+                    tariff_plan_id=plan_id,
+                    status=BillingRunStatus.COMPLETED.value,
+                    active_users_count=0,
+                    charged_users_count=0,
+                    daily_charge=None,
+                    completed_at=datetime.now(UTC),
+                ),
+            ]
+        )
+        await db.commit()
+
+    response = await client.get(f"/api/admin/tariff-plans/{plan['id']}/billing-history")
+
+    assert response.status_code == 200
+    assert [
+        (item["billing_date"], item["daily_charge"], item["active_users_count"])
+        for item in response.json()
+    ] == [
+        ("2026-08-16", "32.26", 2),
+        ("2026-08-15", "64.52", 1),
+    ]
 
 
 async def test_tariff_plans_require_admin(client, session_factory, monkeypatch) -> None:

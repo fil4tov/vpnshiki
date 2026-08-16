@@ -57,3 +57,16 @@ class TariffPlanRead(BaseModel):
     @field_serializer("monthly_amount")
     def serialize_money(self, value: Decimal) -> str:
         return f"{value:.2f}"
+
+
+class TariffPlanBillingRunRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    billing_date: date
+    daily_charge: Decimal
+    active_users_count: int
+
+    @field_serializer("daily_charge")
+    def serialize_daily_charge(self, value: Decimal) -> str:
+        return f"{value:.2f}"
