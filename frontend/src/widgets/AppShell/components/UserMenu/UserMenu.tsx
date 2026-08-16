@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { FiChevronDown, FiKey, FiLogOut } from 'react-icons/fi';
 
 import { ChangePasswordModal, useUserStore } from '#entities/user';
-import { Badge } from '#shared/ui';
 
 import styles from './UserMenu.module.scss';
 
@@ -46,8 +45,6 @@ export function UserMenu() {
 
   if (!user) return null;
 
-  const roleLabel = user.role === 'admin' ? 'Администратор' : 'Участник';
-
   return (
     <>
       <div className={styles.root} ref={rootRef}>
@@ -67,7 +64,6 @@ export function UserMenu() {
           <div className={styles.dropdown} role="menu" aria-label="Меню пользователя">
             <div className={styles.identity}>
               <strong>{user.name}</strong>
-              <Badge tone={user.role === 'admin' ? 'accent' : 'neutral'}>{roleLabel}</Badge>
             </div>
             <div className={styles.menuActions}>
               <button ref={firstItemRef} type="button" role="menuitem" onClick={() => { setOpen(false); setPasswordOpen(true); }}>

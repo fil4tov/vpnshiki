@@ -10,6 +10,10 @@
   font-weight: 620;
 }
 
+.inputWrapper {
+  position: relative;
+}
+
 .input {
   width: 100%;
   min-height: 46px;
@@ -24,6 +28,57 @@
   &::placeholder { color: color-mix(in srgb, var(--text-muted) 70%, transparent); }
   &:hover { border-color: color-mix(in srgb, var(--text-muted) 40%, transparent); }
   &:focus { border-color: var(--accent); box-shadow: var(--focus); background: var(--surface-strong); }
+}
+
+.inputWithAdornment {
+  padding-inline-end: 50px;
+}
+
+.inputWithPasswordActions {
+  padding-inline-end: 86px;
+}
+
+.passwordActions {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  display: flex;
+  gap: 2px;
+  transform: translateY(-50%);
+}
+
+.passwordToggle {
+  display: inline-grid;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  color: var(--text-muted);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: 9px;
+  place-items: center;
+  transition: color 160ms ease, background 160ms ease;
+
+  &:hover {
+    color: var(--text);
+    background: var(--surface-strong);
+  }
+
+  &:active {
+    color: var(--text);
+    background: color-mix(in srgb, var(--surface-strong) 70%, var(--accent-soft));
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--focus);
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
 }
 
 .invalid { border-color: var(--danger); }

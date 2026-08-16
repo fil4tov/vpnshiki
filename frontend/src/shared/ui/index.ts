@@ -2,6 +2,7 @@ export { Badge } from './Badge';
 export { Button } from './Button';
 export { FieldSelect } from './FieldSelect';
 export type { FieldSelectOption } from './FieldSelect';
+export { GeneratePasswordButton } from './GeneratePasswordButton';
 export { LoadingState } from './LoadingState';
 export { Modal } from './Modal';
 export { Surface } from './Surface';

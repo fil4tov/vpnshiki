@@ -36,7 +36,8 @@ def new_session(user: User) -> tuple[AuthSession, str]:
 async def login_user(db: AsyncSession, credentials: Credentials) -> tuple[User, str]:
     user = await db.scalar(
         select(User).where(
-            or_(User.name == credentials.name, func.lower(User.name) == credentials.name.lower())
+            or_(User.name == credentials.name, func.lower(User.name) == credentials.name.lower()),
+            User.deleted_at.is_(None),
         )
     )
     encoded = user.password_hash if user is not None else DUMMY_PASSWORD_HASH
@@ -61,7 +62,11 @@ async def get_session_user(db: AsyncSession, token: str | None) -> User:
         .options(selectinload(AuthSession.user))
         .where(AuthSession.token_hash == digest_session_token(token))
     )
-    if auth_session is None or _as_utc(auth_session.expires_at) <= datetime.now(UTC):
+    if (
+        auth_session is None
+        or _as_utc(auth_session.expires_at) <= datetime.now(UTC)
+        or auth_session.user.deleted_at is not None
+    ):
         if auth_session is not None:
             await db.delete(auth_session)
             await db.commit()

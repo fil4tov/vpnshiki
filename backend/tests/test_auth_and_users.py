@@ -8,9 +8,29 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.auth.models import AuthSession
 from app.auth.security import hash_password
+from app.billing.models import UserStatusHistory
+from app.errors import ApiError
 from app.main import app
 from app.tariff_plans.models import TariffPlan
 from app.users.models import AccountStatus, User
+from app.vpn_access.dependencies import get_xui_client
+
+
+class FakeStatusXuiClient:
+    def __init__(self) -> None:
+        self.updates: list[tuple[str, bool]] = []
+
+    async def set_enabled(self, email: str, enabled: bool) -> None:
+        self.updates.append((email, enabled))
+
+
+class FailingStatusXuiClient:
+    async def set_enabled(self, _email: str, _enabled: bool) -> None:
+        raise ApiError(
+            status_code=502,
+            code="vpn_provider_unavailable",
+            message="VPN-панель временно недоступна",
+        )
 
 
 async def login(client: AsyncClient, name: str = "admin", password: str = "admin-password"):
@@ -37,6 +57,8 @@ async def test_invalid_login_uses_stable_error(client: AsyncClient) -> None:
 
 
 async def test_admin_creates_and_updates_user(client: AsyncClient) -> None:
+    provider = FakeStatusXuiClient()
+    app.dependency_overrides[get_xui_client] = lambda: provider
     await login(client)
     created = await client.post(
         "/api/admin/users",
@@ -60,6 +82,7 @@ async def test_admin_creates_and_updates_user(client: AsyncClient) -> None:
     assert updated.status_code == 200
     assert updated.json()["account_status"] == "blocked"
     assert updated.json()["balance"] == "12.34"
+    assert provider.updates == [("[web]-Лена", False)]
     users = (await client.get("/api/admin/users")).json()
     assert [user["name"] for user in users] == ["admin", "Лена"]
 
@@ -135,10 +158,42 @@ async def test_last_admin_cannot_be_demoted(client: AsyncClient, admin: User) ->
     assert response.json()["code"] == "last_admin"
 
 
+async def test_provider_failure_rejects_manual_status_change(
+    client: AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    await login(client)
+    created = await client.post(
+        "/api/admin/users",
+        json={"name": "Без связи", "password": "user-password"},
+    )
+    user_id = UUID(created.json()["id"])
+    app.dependency_overrides[get_xui_client] = lambda: FailingStatusXuiClient()
+
+    response = await client.patch(
+        f"/api/admin/users/{user_id}", json={"account_status": "blocked"}
+    )
+
+    assert response.status_code == 502
+    assert response.json()["code"] == "vpn_provider_unavailable"
+    async with session_factory() as db:
+        user = await db.get(User, user_id)
+        assert user is not None
+        assert user.account_status == AccountStatus.ACTIVE.value
+        statuses = (
+            await db.scalars(
+                select(UserStatusHistory).where(UserStatusHistory.user_id == user_id)
+            )
+        ).all()
+        assert [item.new_status for item in statuses] == [AccountStatus.ACTIVE.value]
+
+
 async def test_admin_deletes_user_and_revokes_sessions(
     client: AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
+    provider = FakeStatusXuiClient()
+    app.dependency_overrides[get_xui_client] = lambda: provider
     await login(client)
     created = await client.post(
         "/api/admin/users",
@@ -154,11 +209,28 @@ async def test_admin_deletes_user_and_revokes_sessions(
         assert (await user_client.get("/api/auth/me")).status_code == 401
 
         async with session_factory() as db:
-            assert await db.get(User, user_id) is None
+            deleted_user = await db.get(User, user_id)
+            assert deleted_user is not None
+            assert deleted_user.deleted_at is not None
+            assert deleted_user.account_status == AccountStatus.BLOCKED.value
             session_count = await db.scalar(
                 select(func.count()).select_from(AuthSession).where(AuthSession.user_id == user_id)
             )
             assert session_count == 0
+            history = (
+                await db.scalars(
+                    select(UserStatusHistory)
+                    .where(UserStatusHistory.user_id == user_id)
+                    .order_by(UserStatusHistory.created_at)
+                )
+            ).all()
+            assert [item.new_status for item in history] == ["active", "blocked"]
+        assert provider.updates == [("[web]-Удаляемый", False)]
+        assert (await login(user_client, "Удаляемый", "user-password")).status_code == 401
+        assert all(
+            item["id"] != str(user_id)
+            for item in (await client.get("/api/admin/users")).json()
+        )
     finally:
         await user_client.aclose()
 

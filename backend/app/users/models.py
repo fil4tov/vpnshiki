@@ -47,6 +47,7 @@ class User(Base):
         default=lambda: datetime.now(UTC),
         onupdate=lambda: datetime.now(UTC),
     )
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     sessions: Mapped[list["AuthSession"]] = relationship(
         back_populates="user", cascade="all, delete-orphan", passive_deletes=True
     )

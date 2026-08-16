@@ -5,8 +5,10 @@ from sqlalchemy import pool
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from app.auth import models as auth_models  # noqa: F401
+from app.billing import models as billing_models  # noqa: F401
 from app.config import get_settings
 from app.db import Base
+from app.tariff_plans import models as tariff_plan_models  # noqa: F401
 from app.users import models  # noqa: F401
 
 config = context.config

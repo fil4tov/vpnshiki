@@ -16,6 +16,11 @@ export function Modal({ open, title, children, onClose }: ModalProps) {
   const titleId = useId();
   const closeRef = useRef<HTMLButtonElement>(null);
   const modalRef = useRef<HTMLElement>(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!open) return undefined;
@@ -25,7 +30,7 @@ export function Modal({ open, title, children, onClose }: ModalProps) {
     closeRef.current?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (event.key !== 'Tab' || !modalRef.current) return;
@@ -49,7 +54,7 @@ export function Modal({ open, title, children, onClose }: ModalProps) {
       document.removeEventListener('keydown', onKeyDown);
       previousFocus?.focus();
     };
-  }, [onClose, open]);
+  }, [open]);
 
   if (!open) return null;
   return createPortal(

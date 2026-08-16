@@ -10,6 +10,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.admin import router as admin_router
 from app.auth import router as auth_router
 from app.auth.dependencies import Database
+from app.billing.scheduler import BillingScheduler
 from app.bootstrap import ensure_admin
 from app.config import get_settings
 from app.db import SessionFactory
@@ -23,9 +24,15 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
+    settings = get_settings()
     async with SessionFactory() as db:
-        await ensure_admin(db, get_settings())
-    yield
+        await ensure_admin(db, settings)
+    scheduler = BillingScheduler(SessionFactory, settings)
+    scheduler.start()
+    try:
+        yield
+    finally:
+        await scheduler.stop()
 
 
 app = FastAPI(title="VPNщики API", lifespan=lifespan)

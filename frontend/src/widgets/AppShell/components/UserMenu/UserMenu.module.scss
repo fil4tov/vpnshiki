@@ -6,7 +6,7 @@
 .trigger > svg { display: block; width: 13px; height: 13px; }
 .avatar { display: grid; width: 30px; height: 30px; place-items: center; color: var(--text); font-weight: 750; background: var(--accent-soft); border: 1px solid var(--border-strong); border-radius: 9px; }
 .dropdown { position: absolute; top: calc(100% + 10px); right: 0; width: min(280px, calc(100vw - 28px)); padding: 10px; background: var(--surface-strong); border: 1px solid var(--border-strong); border-radius: 16px; box-shadow: var(--shadow); backdrop-filter: blur(22px); }
-.identity { min-width: 0; display: grid; justify-items: start; gap: 8px; padding: 8px 9px 13px; border-bottom: 1px solid var(--border); }
+.identity { min-width: 0; padding: 8px 9px 13px; border-bottom: 1px solid var(--border); }
 .identity strong { max-width: 100%; overflow: hidden; font-size: .92rem; text-overflow: ellipsis; white-space: nowrap; }
 .menuActions { display: grid; gap: 3px; padding-top: 7px; }
 .menuActions button { width: 100%; min-height: 42px; display: flex; align-items: center; gap: 10px; padding: 0 10px; color: var(--text-muted); text-align: left; cursor: pointer; background: transparent; border: 0; border-radius: 10px; transition: color 160ms ease, background 160ms ease; }

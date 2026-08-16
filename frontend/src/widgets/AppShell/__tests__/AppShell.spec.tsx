@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
@@ -42,10 +42,33 @@ describe('AppShell', () => {
     await user.click(screen.getByRole('button', { name: 'Открыть меню пользователя' }));
     expect(screen.getByRole('menu', { name: 'Меню пользователя' })).toBeInTheDocument();
     expect(screen.getByText('Миша')).toBeInTheDocument();
-    expect(screen.getByText('Участник')).toBeInTheDocument();
+    expect(screen.queryByText('Участник')).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('menuitem', { name: 'Сменить пароль' }));
     expect(screen.getByRole('dialog', { name: 'Изменить пароль' })).toBeInTheDocument();
+
+    const newPassword = screen.getByLabelText('Новый пароль');
+    const confirmation = screen.getByLabelText('Повторите новый пароль');
+    await user.click(screen.getByRole('button', { name: 'Сгенерировать пароль' }));
+    expect(newPassword).not.toHaveValue('');
+    expect(confirmation).toHaveValue((newPassword as HTMLInputElement).value);
+    expect(newPassword).toHaveAttribute('type', 'text');
+    expect(confirmation).toHaveAttribute('type', 'text');
+    expect(screen.queryByText('Пароли не совпадают')).not.toBeInTheDocument();
+
+    await user.clear(newPassword);
+    await user.type(newPassword, 'new-password');
+    expect(newPassword).toHaveValue('new-password');
+    expect(newPassword).toHaveFocus();
+    expect(document.querySelector<HTMLInputElement>('input[autocomplete="username"]')).toHaveValue('Миша');
+
+    await user.click(screen.getByRole('button', { name: 'Закрыть' }));
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Изменить пароль' })).not.toBeInTheDocument());
+
+    await user.click(screen.getByRole('button', { name: 'Открыть меню пользователя' }));
+    await user.click(screen.getByRole('menuitem', { name: 'Сменить пароль' }));
+    expect(screen.getByLabelText('Новый пароль')).toHaveValue('');
+    expect(screen.getByLabelText('Повторите новый пароль')).toHaveValue('');
   });
 
   it('shows the admin entry and users sidebar only inside the admin panel', () => {

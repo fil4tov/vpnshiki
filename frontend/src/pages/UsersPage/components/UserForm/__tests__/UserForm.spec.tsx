@@ -5,6 +5,19 @@ import { vi } from 'vitest';
 import { UserForm } from '../UserForm';
 
 describe('UserForm', () => {
+  it('generates and reveals an initial password for a new user', async () => {
+    const user = userEvent.setup();
+    render(<UserForm onCancel={() => undefined} onSubmit={() => Promise.resolve()} />);
+
+    await user.click(screen.getByRole('button', { name: 'Сгенерировать пароль' }));
+
+    const password = screen.getByLabelText('Начальный пароль');
+    expect(screen.getByLabelText('Имя')).toHaveAttribute('placeholder', 'username');
+    expect(screen.getByLabelText('Допустимый минус, ₽')).toHaveValue(500);
+    expect(password).not.toHaveValue('');
+    expect(password).toHaveAttribute('type', 'text');
+  });
+
   it('submits one account status instead of separate activity flags', async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn().mockResolvedValue(undefined);

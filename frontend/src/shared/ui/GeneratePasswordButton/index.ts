@@ -1,0 +1,1 @@
+export { GeneratePasswordButton } from './GeneratePasswordButton';

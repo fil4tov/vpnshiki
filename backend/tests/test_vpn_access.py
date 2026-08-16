@@ -1,4 +1,5 @@
 import asyncio
+import json
 from urllib.parse import unquote
 
 import httpx
@@ -45,6 +46,28 @@ def provider_payloads(email: str = "[web]-Миша") -> tuple[dict, dict]:
             ],
         },
     )
+
+
+def full_provider_client(email: str = "[web]-Миша") -> dict:
+    return {
+        "email": email,
+        "subId": "sub-id-123",
+        "id": 42,
+        "uuid": "client-uuid",
+        "password": "password",
+        "auth": "none",
+        "flow": "xtls-rprx-vision",
+        "security": "auto",
+        "totalGB": 123,
+        "expiryTime": 456,
+        "limitIp": 2,
+        "tgId": 789,
+        "reset": 0,
+        "group": "customers",
+        "comment": "keep exactly",
+        "enable": True,
+        "allowedIPs": ["10.0.0.1"],
+    }
 
 
 def test_settings_read_renamed_x_ui_environment(monkeypatch) -> None:
@@ -164,6 +187,68 @@ async def test_client_requires_all_configuration() -> None:
         assert error.code == "vpn_integration_unconfigured"
     else:
         raise AssertionError("Expected vpn_integration_unconfigured")
+
+
+async def test_client_disables_profile_with_get_then_exact_update_payload() -> None:
+    requests: list[httpx.Request] = []
+    provider_client = full_provider_client()
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        if request.method == "GET":
+            return httpx.Response(
+                200,
+                json={"success": True, "msg": "", "obj": {"client": provider_client}},
+            )
+        return httpx.Response(200, json={"success": True, "msg": "", "obj": None})
+
+    await XuiClient(
+        vpn_settings(), transport=httpx.MockTransport(handler)
+    ).set_enabled("[web]-Миша", False)
+
+    assert [(request.method, request.url.path) for request in requests] == [
+        ("GET", "/base/panel/api/clients/get/[web]-Миша"),
+        ("POST", "/base/panel/api/clients/update/[web]-Миша"),
+    ]
+    payload = json.loads(requests[1].content)
+    assert payload == {
+        "email": provider_client["email"],
+        "subId": provider_client["subId"],
+        "id": provider_client["uuid"],
+        "password": provider_client["password"],
+        "auth": provider_client["auth"],
+        "flow": provider_client["flow"],
+        "security": provider_client["security"],
+        "totalGB": provider_client["totalGB"],
+        "expiryTime": provider_client["expiryTime"],
+        "limitIp": provider_client["limitIp"],
+        "tgId": provider_client["tgId"],
+        "reset": provider_client["reset"],
+        "group": provider_client["group"],
+        "comment": provider_client["comment"],
+        "enable": False,
+    }
+
+
+async def test_client_lists_profile_states() -> None:
+    async def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "success": True,
+                "obj": {
+                    "clients": [
+                        {"email": "[web]-one", "enable": True},
+                        {"email": "[web]-two", "enable": False},
+                    ]
+                },
+            },
+        )
+
+    states = await XuiClient(
+        vpn_settings(), transport=httpx.MockTransport(handler)
+    ).list_client_states()
+    assert states == {"[web]-one": True, "[web]-two": False}
 
 
 class FakeXuiClient:

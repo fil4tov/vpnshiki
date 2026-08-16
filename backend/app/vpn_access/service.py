@@ -1,4 +1,5 @@
 import asyncio
+import logging
 from typing import Any
 from urllib.parse import parse_qs, quote, unquote, urlsplit
 
@@ -10,6 +11,7 @@ from app.errors import ApiError
 from .schemas import VpnAccessRead, VpnProfileRead
 
 PROVIDER_TIMEOUT_SECONDS = 8.0
+logger = logging.getLogger(__name__)
 
 
 def _unconfigured() -> ApiError:
@@ -38,6 +40,7 @@ def _profile_not_found() -> ApiError:
 
 def _response_payload(response: httpx.Response, *, missing_is_not_found: bool) -> dict[str, Any]:
     if not response.is_success:
+        logger.warning("3xUI returned HTTP %s", response.status_code)
         raise _provider_unavailable()
     try:
         payload = response.json()
@@ -47,6 +50,7 @@ def _response_payload(response: httpx.Response, *, missing_is_not_found: bool) -
         raise _provider_unavailable()
     if payload.get("success") is not True:
         message = payload.get("msg")
+        logger.warning("3xUI rejected request: %s", message)
         if missing_is_not_found and isinstance(message, str) and "not found" in message.lower():
             raise _profile_not_found()
         raise _provider_unavailable()
@@ -86,6 +90,124 @@ class XuiClient:
     ) -> None:
         self._settings = settings
         self._transport = transport
+
+    def _connection(self) -> tuple[str, dict[str, str]]:
+        api_url = self._settings.x_ui_api_url
+        token = self._settings.x_ui_token
+        if not api_url or token is None:
+            raise _unconfigured()
+        return api_url.rstrip("/"), {
+            "Authorization": f"Bearer {token.get_secret_value()}"
+        }
+
+    async def get_client(self, email: str) -> dict[str, Any]:
+        base_url, headers = self._connection()
+        encoded_email = quote(email, safe="")
+        try:
+            async with httpx.AsyncClient(
+                headers=headers,
+                timeout=PROVIDER_TIMEOUT_SECONDS,
+                follow_redirects=False,
+                transport=self._transport,
+            ) as client:
+                response = await client.get(f"{base_url}/clients/get/{encoded_email}")
+        except httpx.HTTPError as error:
+            raise _provider_unavailable() from error
+        payload = _response_payload(response, missing_is_not_found=True)
+        try:
+            provider_client = payload["obj"]["client"]
+        except (KeyError, TypeError) as error:
+            raise _provider_unavailable() from error
+        if not isinstance(provider_client, dict):
+            raise _provider_unavailable()
+        return provider_client
+
+    async def list_client_states(self) -> dict[str, bool]:
+        base_url, headers = self._connection()
+        try:
+            async with httpx.AsyncClient(
+                headers=headers,
+                timeout=PROVIDER_TIMEOUT_SECONDS,
+                follow_redirects=False,
+                transport=self._transport,
+            ) as client:
+                response = await client.get(f"{base_url}/clients/list")
+        except httpx.HTTPError as error:
+            raise _provider_unavailable() from error
+        payload = _response_payload(response, missing_is_not_found=False)
+        clients = payload.get("obj")
+        if isinstance(clients, dict):
+            clients = clients.get("clients")
+        if not isinstance(clients, list):
+            raise _provider_unavailable()
+        states: dict[str, bool] = {}
+        for item in clients:
+            if not isinstance(item, dict):
+                raise _provider_unavailable()
+            email = item.get("email")
+            enabled = item.get("enable")
+            if isinstance(email, str) and isinstance(enabled, bool):
+                states[email] = enabled
+        return states
+
+    async def set_enabled(self, email: str, enabled: bool) -> None:
+        provider_client = await self.get_client(email)
+        required_fields = (
+            "email",
+            "subId",
+            "uuid",
+            "password",
+            "auth",
+            "flow",
+            "security",
+            "totalGB",
+            "expiryTime",
+            "limitIp",
+            "tgId",
+            "reset",
+            "group",
+            "comment",
+        )
+        if provider_client.get("email") != email or any(
+            field not in provider_client for field in required_fields
+        ):
+            raise _provider_unavailable()
+        update = {
+            "email": provider_client["email"],
+            "subId": provider_client["subId"],
+            "id": provider_client["uuid"],
+            "password": provider_client["password"],
+            "auth": provider_client["auth"],
+            "flow": provider_client["flow"],
+            "security": provider_client["security"],
+            "totalGB": provider_client["totalGB"],
+            "expiryTime": provider_client["expiryTime"],
+            "limitIp": provider_client["limitIp"],
+            "tgId": provider_client["tgId"],
+            "reset": provider_client["reset"],
+            "group": provider_client["group"],
+            "comment": provider_client["comment"],
+            "enable": enabled,
+        }
+        reverse = provider_client.get("reverse")
+        if isinstance(reverse, dict) and reverse.get("tag"):
+            update["reverse"] = {"tag": reverse["tag"]}
+
+        base_url, headers = self._connection()
+        encoded_email = quote(email, safe="")
+        try:
+            async with httpx.AsyncClient(
+                headers=headers,
+                timeout=PROVIDER_TIMEOUT_SECONDS,
+                follow_redirects=False,
+                transport=self._transport,
+            ) as client:
+                response = await client.post(
+                    f"{base_url}/clients/update/{encoded_email}", json=update
+                )
+        except httpx.HTTPError as error:
+            raise _provider_unavailable() from error
+        _response_payload(response, missing_is_not_found=False)
 
     async def fetch_access(self, email: str) -> VpnAccessRead:
         api_url = self._settings.x_ui_api_url

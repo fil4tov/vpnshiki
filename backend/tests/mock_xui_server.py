@@ -3,9 +3,33 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import quote, unquote, urlsplit
 
 TOKEN = "Bearer e2e-provider-token"
+CLIENTS: dict[str, dict] = {}
 
 
 class Handler(BaseHTTPRequestHandler):
+    @staticmethod
+    def _client(email: str) -> dict:
+        if email not in CLIENTS:
+            CLIENTS[email] = {
+                "email": email,
+                "subId": f"e2e-{email.removeprefix('[web]-')}",
+                "id": len(CLIENTS) + 1,
+                "uuid": f"e2e-id-{email}",
+                "password": "e2e-password",
+                "auth": "none",
+                "flow": "xtls-rprx-vision",
+                "security": "auto",
+                "totalGB": 0,
+                "expiryTime": 0,
+                "limitIp": 0,
+                "tgId": 0,
+                "reset": 0,
+                "group": "web",
+                "comment": "E2E profile",
+                "enable": True,
+            }
+        return CLIENTS[email]
+
     def do_GET(self) -> None:
         path = urlsplit(self.path).path
         if path == "/health":
@@ -15,6 +39,10 @@ class Handler(BaseHTTPRequestHandler):
             self._send(401, {"success": False, "msg": "Unauthorized", "obj": None})
             return
 
+        if path == "/panel/api/clients/list":
+            self._send(200, {"success": True, "msg": "", "obj": list(CLIENTS.values())})
+            return
+
         email = unquote(path.rsplit("/", 1)[-1])
         if path.startswith("/panel/api/clients/get/"):
             self._send(
@@ -22,7 +50,7 @@ class Handler(BaseHTTPRequestHandler):
                 {
                     "success": True,
                     "msg": "",
-                    "obj": {"client": {"subId": f"e2e-{email.removeprefix('[web]-')}"}},
+                    "obj": {"client": self._client(email)},
                 },
             )
             return
@@ -47,6 +75,33 @@ class Handler(BaseHTTPRequestHandler):
             )
             return
         self._send(404, {"success": False, "msg": "Not found", "obj": None})
+
+    def do_POST(self) -> None:
+        path = urlsplit(self.path).path
+        if self.headers.get("Authorization") != TOKEN:
+            self._send(401, {"success": False, "msg": "Unauthorized", "obj": None})
+            return
+        if not path.startswith("/panel/api/clients/update/"):
+            self._send(404, {"success": False, "msg": "Not found", "obj": None})
+            return
+        email = unquote(path.rsplit("/", 1)[-1])
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+            payload = json.loads(self.rfile.read(length))
+        except (TypeError, ValueError):
+            self._send(400, {"success": False, "msg": "Invalid payload", "obj": None})
+            return
+        if not isinstance(payload, dict) or payload.get("email") != email:
+            self._send(400, {"success": False, "msg": "Invalid client", "obj": None})
+            return
+        current = self._client(email)
+        CLIENTS[email] = {
+            **current,
+            **payload,
+            "id": current["id"],
+            "uuid": payload["id"],
+        }
+        self._send(200, {"success": True, "msg": "", "obj": None})
 
     def log_message(self, _format: str, *_args: object) -> None:
         return

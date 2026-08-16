@@ -107,7 +107,10 @@ async def get_user_daily_charge(db: AsyncSession, user: User) -> Decimal | None:
     active_users = await db.scalar(
         select(func.count())
         .select_from(User)
-        .where(User.account_status == AccountStatus.ACTIVE.value)
+        .where(
+            User.account_status == AccountStatus.ACTIVE.value,
+            User.deleted_at.is_(None),
+        )
     )
     if not active_users:
         return None
