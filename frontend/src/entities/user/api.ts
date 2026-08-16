@@ -1,14 +1,17 @@
 import { apiRequest } from '#shared/api';
 
 import type {
+  AdminUser,
   AdminUserPayload,
   AdminUserUpdatePayload,
   DailyCharge,
   LoginPayload,
   User,
+  UserCharge,
 } from './types';
 
 export const adminUsersKey = ['users'] as const;
+export const userChargesKey = (userId: string) => ['users', userId, 'charges'] as const;
 export const myDailyChargeKey = ['users', 'me', 'daily-charge'] as const;
 
 export const getCurrentUser = () => apiRequest<User>('auth/me');
@@ -19,7 +22,8 @@ export const changeMyPassword = (currentPassword: string, newPassword: string) =
   'users/me/password',
   { method: 'post', json: { current_password: currentPassword, new_password: newPassword } },
 );
-export const getUsers = () => apiRequest<User[]>('admin/users');
+export const getUsers = () => apiRequest<AdminUser[]>('admin/users');
+export const getUserCharges = (userId: string) => apiRequest<UserCharge[]>(`admin/users/${userId}/charges`);
 export const createUser = (payload: AdminUserPayload) => apiRequest<User>('admin/users', {
   method: 'post', json: payload,
 });

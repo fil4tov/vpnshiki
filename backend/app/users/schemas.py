@@ -29,6 +29,26 @@ class UserRead(BaseModel):
         return f"{value:.2f}"
 
 
+class AdminUserRead(UserRead):
+    total_charged: Decimal
+
+    @field_serializer("total_charged")
+    def serialize_total_charged(self, value: Decimal) -> str:
+        return f"{value:.2f}"
+
+
+class UserChargeRead(BaseModel):
+    id: UUID
+    amount: Decimal
+    tariff_plan_id: UUID
+    tariff_plan_name: str
+    created_at: datetime
+
+    @field_serializer("amount")
+    def serialize_amount(self, value: Decimal) -> str:
+        return f"{value:.2f}"
+
+
 class DailyChargeRead(BaseModel):
     daily_charge: Decimal | None
 

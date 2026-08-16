@@ -8,11 +8,19 @@ from sqlalchemy.exc import IntegrityError
 from app.auth.dependencies import CurrentAdmin, Database
 from app.auth.models import AuthSession
 from app.auth.security import hash_password
-from app.billing.models import StatusChangeSource
+from app.billing.models import StatusChangeSource, UserDailyCharge
 from app.billing.service import add_initial_status_history, profile_email, record_status_change
 from app.errors import ApiError
+from app.tariff_plans.models import TariffPlan
 from app.users.models import AccountStatus, User, UserRole
-from app.users.schemas import AdminPasswordReset, AdminUserCreate, AdminUserUpdate, UserRead
+from app.users.schemas import (
+    AdminPasswordReset,
+    AdminUserCreate,
+    AdminUserRead,
+    AdminUserUpdate,
+    UserChargeRead,
+    UserRead,
+)
 from app.vpn_access.dependencies import XuiProvider
 
 router = APIRouter(prefix="/api/admin/users", tags=["admin"])
@@ -42,14 +50,63 @@ async def _commit_unique(db: Database) -> None:
         raise _name_taken(error) from error
 
 
-@router.get("", response_model=list[UserRead])
-async def list_users(_admin: CurrentAdmin, db: Database) -> list[UserRead]:
-    users = (
-        await db.scalars(
-            select(User).where(User.deleted_at.is_(None)).order_by(func.lower(User.name))
+@router.get("", response_model=list[AdminUserRead])
+async def list_users(_admin: CurrentAdmin, db: Database) -> list[AdminUserRead]:
+    charge_totals = (
+        select(
+            UserDailyCharge.user_id,
+            func.sum(UserDailyCharge.amount).label("total_charged"),
+        )
+        .group_by(UserDailyCharge.user_id)
+        .subquery()
+    )
+    rows = (
+        await db.execute(
+            select(
+                User,
+                func.coalesce(charge_totals.c.total_charged, 0).label("total_charged"),
+            )
+            .outerjoin(charge_totals, charge_totals.c.user_id == User.id)
+            .where(User.deleted_at.is_(None))
+            .order_by(func.lower(User.name))
         )
     ).all()
-    return [UserRead.model_validate(user) for user in users]
+    return [
+        AdminUserRead.model_validate(
+            {
+                **UserRead.model_validate(user).model_dump(),
+                "total_charged": total_charged,
+            }
+        )
+        for user, total_charged in rows
+    ]
+
+
+@router.get("/{user_id}/charges", response_model=list[UserChargeRead])
+async def list_user_charges(
+    user_id: UUID,
+    _admin: CurrentAdmin,
+    db: Database,
+) -> list[UserChargeRead]:
+    await _get_user(db, user_id)
+    rows = (
+        await db.execute(
+            select(UserDailyCharge, TariffPlan.name)
+            .join(TariffPlan, TariffPlan.id == UserDailyCharge.tariff_plan_id)
+            .where(UserDailyCharge.user_id == user_id)
+            .order_by(UserDailyCharge.created_at.desc())
+        )
+    ).all()
+    return [
+        UserChargeRead(
+            id=charge.id,
+            amount=charge.amount,
+            tariff_plan_id=charge.tariff_plan_id,
+            tariff_plan_name=tariff_plan_name,
+            created_at=charge.created_at,
+        )
+        for charge, tariff_plan_name in rows
+    ]
 
 
 @router.post("", response_model=UserRead, status_code=status.HTTP_201_CREATED)

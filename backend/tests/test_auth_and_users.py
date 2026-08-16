@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from uuid import UUID
 
@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.auth.models import AuthSession
 from app.auth.security import hash_password
-from app.billing.models import UserStatusHistory
+from app.billing.models import UserDailyCharge, UserStatusHistory
 from app.errors import ApiError
 from app.main import app
 from app.tariff_plans.models import TariffPlan
@@ -56,7 +56,10 @@ async def test_invalid_login_uses_stable_error(client: AsyncClient) -> None:
     assert response.json() == {"code": "invalid_credentials", "message": "Неверное имя или пароль"}
 
 
-async def test_admin_creates_and_updates_user(client: AsyncClient) -> None:
+async def test_admin_creates_and_updates_user(
+    client: AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
     provider = FakeStatusXuiClient()
     app.dependency_overrides[get_xui_client] = lambda: provider
     await login(client)
@@ -83,8 +86,46 @@ async def test_admin_creates_and_updates_user(client: AsyncClient) -> None:
     assert updated.json()["account_status"] == "blocked"
     assert updated.json()["balance"] == "12.34"
     assert provider.updates == [("[web]-Лена", False)]
+
+    async with session_factory() as db:
+        plan = TariffPlan(
+            name="TP_01.08.2026",
+            monthly_amount=Decimal("3100.00"),
+            start_date=date(2026, 8, 1),
+        )
+        db.add(plan)
+        await db.flush()
+        db.add_all(
+            [
+                UserDailyCharge(
+                    user_id=user_id,
+                    amount=Decimal("10.25"),
+                    tariff_plan_id=plan.id,
+                    created_at=datetime(2026, 8, 1, tzinfo=UTC),
+                ),
+                UserDailyCharge(
+                    user_id=user_id,
+                    amount=Decimal("20.50"),
+                    tariff_plan_id=plan.id,
+                    created_at=datetime(2026, 8, 2, tzinfo=UTC),
+                ),
+            ]
+        )
+        await db.commit()
+
     users = (await client.get("/api/admin/users")).json()
     assert [user["name"] for user in users] == ["admin", "Лена"]
+    assert {user["name"]: user["total_charged"] for user in users} == {
+        "admin": "0.00",
+        "Лена": "30.75",
+    }
+    history = (await client.get(f"/api/admin/users/{user_id}/charges")).json()
+    assert [entry["created_at"][:10] for entry in history] == ["2026-08-02", "2026-08-01"]
+    assert [entry["amount"] for entry in history] == ["20.50", "10.25"]
+    assert [entry["tariff_plan_name"] for entry in history] == [
+        "TP_01.08.2026",
+        "TP_01.08.2026",
+    ]
 
 
 async def test_names_are_unique_case_insensitively(client: AsyncClient) -> None:

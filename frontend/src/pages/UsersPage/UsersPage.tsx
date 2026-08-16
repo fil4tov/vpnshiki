@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { FiEdit3, FiKey, FiPlus, FiSearch, FiTrash2, FiUsers } from 'react-icons/fi';
+import { FiClock, FiEdit3, FiKey, FiPlus, FiSearch, FiTrash2, FiUsers } from 'react-icons/fi';
 
 import {
   adminUsersKey,
@@ -11,11 +11,11 @@ import {
   updateUser,
   useUserStore,
 } from '#entities/user';
-import type { AdminUserPayload, AdminUserUpdatePayload, User } from '#entities/user';
+import type { AdminUser, AdminUserPayload, AdminUserUpdatePayload, User } from '#entities/user';
 import { formatMoney, isNegativeMoney } from '#shared/lib/money';
 import { Badge, Button, LoadingState, Modal, Surface } from '#shared/ui';
 
-import { DeleteUserConfirmation, ResetPasswordForm, UserForm } from './components';
+import { ChargeHistoryModal, DeleteUserConfirmation, ResetPasswordForm, UserForm } from './components';
 import styles from './UsersPage.module.scss';
 
 export function UsersPage() {
@@ -27,6 +27,7 @@ export function UsersPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
   const [resetting, setResetting] = useState<User | null>(null);
+  const [historyUser, setHistoryUser] = useState<AdminUser | null>(null);
   const [deleting, setDeleting] = useState<User | null>(null);
   const usersQuery = useQuery({ queryKey: adminUsersKey, queryFn: getUsers });
 
@@ -95,10 +96,11 @@ export function UsersPage() {
         ) : (
           <div className={styles.tableWrap}>
             <table>
-              <thead><tr><th>Пользователь</th><th>Баланс</th><th>Лимит</th><th>Статус</th><th><span className={styles.srOnly}>Действия</span></th></tr></thead>
+              <thead><tr><th>Пользователь</th><th>Статус</th><th>Баланс</th><th>Лимит</th><th>Всего списаний</th><th>История списаний</th><th><span className={styles.srOnly}>Действия</span></th></tr></thead>
               <tbody>{users.map((user) => (
                 <tr key={user.id}>
                   <td data-label="Пользователь"><div className={styles.person}><span>{user.name.slice(0, 1).toUpperCase()}</span><div><strong>{user.name}</strong><small>{user.role === 'admin' ? 'Администратор' : 'Участник'}</small></div></div></td>
+                  <td data-label="Статус"><Badge tone={user.account_status === 'blocked' ? 'danger' : user.account_status === 'active' ? 'positive' : 'warning'}>{user.account_status === 'blocked' ? 'Заблокирован' : user.account_status === 'active' ? 'Активен' : 'Приостановлен'}</Badge></td>
                   <td
                     data-label="Баланс"
                     className={`${styles.money} ${isNegativeMoney(user.balance) ? styles.negativeMoney : ''}`}
@@ -106,7 +108,13 @@ export function UsersPage() {
                     {formatMoney(user.balance)}
                   </td>
                   <td data-label="Лимит" className={styles.money}>{formatMoney(user.negative_balance_limit)}</td>
-                  <td data-label="Статус"><Badge tone={user.account_status === 'blocked' ? 'danger' : user.account_status === 'active' ? 'positive' : 'warning'}>{user.account_status === 'blocked' ? 'Заблокирован' : user.account_status === 'active' ? 'Активен' : 'Приостановлен'}</Badge></td>
+                  <td data-label="Всего списаний" className={styles.money}>{formatMoney(user.total_charged)}</td>
+                  <td data-label="История списаний" className={styles.historyCell}>
+                    <button type="button" onClick={() => setHistoryUser(user)} aria-label={`Открыть историю списаний ${user.name}`}>
+                      <FiClock aria-hidden="true" />
+                      <span>Открыть</span>
+                    </button>
+                  </td>
                   <td className={styles.rowActions}>
                     <button type="button" onClick={() => setEditing(user)} aria-label={`Редактировать ${user.name}`}><FiEdit3 /></button>
                     <button type="button" onClick={() => setResetting(user)} aria-label={`Сбросить пароль ${user.name}`}><FiKey /></button>
@@ -130,6 +138,7 @@ export function UsersPage() {
       <Modal open={createOpen} title="Новый пользователь" onClose={() => setCreateOpen(false)}><UserForm onCancel={() => setCreateOpen(false)} onSubmit={saveCreate} /></Modal>
       <Modal open={Boolean(editing)} title="Настройки пользователя" onClose={() => setEditing(null)}>{editing && <UserForm user={editing} onCancel={() => setEditing(null)} onSubmit={saveEdit} />}</Modal>
       <Modal open={Boolean(resetting)} title="Сбросить пароль" onClose={() => setResetting(null)}>{resetting && <ResetPasswordForm name={resetting.name} onCancel={() => setResetting(null)} onSubmit={savePassword} />}</Modal>
+      {historyUser && <ChargeHistoryModal user={historyUser} onClose={() => setHistoryUser(null)} />}
       <Modal open={Boolean(deleting)} title="Удалить пользователя" onClose={() => setDeleting(null)}>{deleting && <DeleteUserConfirmation name={deleting.name} onCancel={() => setDeleting(null)} onConfirm={confirmDelete} />}</Modal>
     </div>
   );

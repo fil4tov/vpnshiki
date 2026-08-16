@@ -12,6 +12,18 @@ export interface User {
   updated_at: string;
 }
 
+export interface AdminUser extends User {
+  total_charged: string;
+}
+
+export interface UserCharge {
+  id: string;
+  amount: string;
+  tariff_plan_id: string;
+  tariff_plan_name: string;
+  created_at: string;
+}
+
 export interface DailyCharge {
   daily_charge: string | null;
 }
