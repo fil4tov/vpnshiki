@@ -3,13 +3,14 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
+from fastapi.responses import HTMLResponse, JSONResponse
 from sqlalchemy import text
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.admin import router as admin_router
 from app.auth import router as auth_router
-from app.auth.dependencies import Database
+from app.auth.dependencies import CurrentAdmin, Database
 from app.billing.scheduler import BillingScheduler
 from app.bootstrap import ensure_admin
 from app.config import get_settings
@@ -35,12 +36,43 @@ async def lifespan(_app: FastAPI):
         await scheduler.stop()
 
 
-app = FastAPI(title="VPNщики API", lifespan=lifespan)
+app = FastAPI(
+    title="VPNщики API",
+    lifespan=lifespan,
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
+)
 app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(admin_router)
 app.include_router(tariff_plans_router)
 app.include_router(vpn_access_router)
+
+
+@app.get("/api/openapi.json", include_in_schema=False)
+async def openapi_schema(_admin: CurrentAdmin) -> JSONResponse:
+    return JSONResponse(app.openapi(), headers={"Cache-Control": "no-store"})
+
+
+@app.get("/api/docs", include_in_schema=False)
+async def swagger_docs(_admin: CurrentAdmin) -> HTMLResponse:
+    response = get_swagger_ui_html(
+        openapi_url="/api/openapi.json",
+        title=f"{app.title} — Swagger UI",
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@app.get("/api/redoc", include_in_schema=False)
+async def redoc_docs(_admin: CurrentAdmin) -> HTMLResponse:
+    response = get_redoc_html(
+        openapi_url="/api/openapi.json",
+        title=f"{app.title} — ReDoc",
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @app.exception_handler(ApiError)
