@@ -27,7 +27,7 @@ export function AppHeader({ theme, toggleTheme }: AppHeaderProps) {
         <div className={styles.actions}>
           {user?.role === 'admin' && (
             <Link
-              to="/admin/users"
+              to={inAdminPanel ? '/' : '/admin/users'}
               className={`${styles.adminLink} ${inAdminPanel ? styles.activeAdminLink : ''}`}
             >
               <FiSettings aria-hidden="true" />

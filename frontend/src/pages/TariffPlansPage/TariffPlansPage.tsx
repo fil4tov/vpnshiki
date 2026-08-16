@@ -82,7 +82,7 @@ export function TariffPlansPage() {
           <p>Расписание стоимости</p>
           <h1>Тарифные планы</h1>
         </div>
-        <Button onClick={() => setCreateOpen(true)}><FiPlus />Добавить план</Button>
+        <Button onClick={() => setCreateOpen(true)}><FiPlus />Добавить</Button>
       </header>
 
       {!plansQuery.isLoading && !plansQuery.isError && (

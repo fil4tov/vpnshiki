@@ -75,7 +75,7 @@ describe('AppShell', () => {
     useUserStore.setState({ user: { ...baseUser, role: 'admin' }, status: 'authenticated' });
     renderShell('/admin/users');
 
-    expect(screen.getByRole('link', { name: 'Админ-панель' })).toHaveAttribute('href', '/admin/users');
+    expect(screen.getByRole('link', { name: 'Админ-панель' })).toHaveAttribute('href', '/');
     expect(screen.getByRole('navigation', { name: 'Навигация администратора' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Пользователи' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Тарифные планы' })).toBeInTheDocument();

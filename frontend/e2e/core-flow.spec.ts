@@ -138,7 +138,7 @@ test('administrator maintains a continuous tariff plan schedule', async ({ page 
   await expect(page).toHaveURL(/\/admin\/tariff-plans$/);
   await expect(page.getByRole('heading', { name: 'Тарифные планы' })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Добавить план' }).click();
+  await page.getByRole('button', { name: 'Добавить' }).click();
   const firstDialog = page.getByRole('dialog', { name: 'Новый тарифный план' });
   await firstDialog.getByLabel('Сумма за месяц, ₽').fill('1000.50');
   await firstDialog.getByLabel('Дата начала').fill(initialStart);
@@ -150,7 +150,7 @@ test('administrator maintains a continuous tariff plan schedule', async ({ page 
   await expect(currentPlanCard).toContainText('В сутки');
   await expect(currentPlanCard).toContainText('Активных пользователей');
 
-  await page.getByRole('button', { name: 'Добавить план' }).click();
+  await page.getByRole('button', { name: 'Добавить' }).click();
   const futureDialog = page.getByRole('dialog', { name: 'Новый тарифный план' });
   await futureDialog.getByLabel('Сумма за месяц, ₽').fill('1200');
   await futureDialog.getByLabel('Дата начала').fill(futureStart);
