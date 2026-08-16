@@ -30,6 +30,7 @@ from app.users.schemas import (
     VpnStatus,
 )
 from app.vpn_access.dependencies import XuiProvider
+from app.vpn_access.service import profile_matches
 
 router = APIRouter(prefix="/api/admin/users", tags=["admin"])
 
@@ -104,7 +105,10 @@ async def list_users(
                     VpnStatus.UNKNOWN
                     if online_clients is None
                     else VpnStatus.ONLINE
-                    if profile_email(user) in online_clients
+                    if any(
+                        profile_matches(email, profile_email(user))
+                        for email in online_clients
+                    )
                     else VpnStatus.OFFLINE
                 ),
             }
@@ -226,10 +230,9 @@ async def update_user(
             )
     target_status = changes.pop("account_status", None)
     if target_status is not None and target_status.value != user.account_status:
-        if target_status in (AccountStatus.ACTIVE, AccountStatus.BLOCKED):
-            await provider.set_enabled(
-                profile_email(user), target_status == AccountStatus.ACTIVE
-            )
+        await provider.set_matching_enabled(
+            profile_email(user), target_status == AccountStatus.ACTIVE
+        )
         await record_status_change(
             db,
             user,
@@ -269,7 +272,7 @@ async def delete_user(
             code="cannot_delete_self",
             message="Нельзя удалить собственный аккаунт",
         )
-    await provider.set_enabled(profile_email(user), False)
+    await provider.set_matching_enabled(profile_email(user), False)
     await record_status_change(
         db,
         user,

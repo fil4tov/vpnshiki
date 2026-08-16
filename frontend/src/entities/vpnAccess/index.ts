@@ -1,2 +1,2 @@
 export { getMyVpnAccess, myVpnAccessKey } from './api';
-export type { VpnAccess, VpnProfile } from './types';
+export type { VpnAccess, VpnClientProfile, VpnConnection } from './types';

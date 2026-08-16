@@ -22,6 +22,6 @@ async def read_vpn_access(
             code="vpn_access_inactive",
             message="VPN доступен только для активного аккаунта",
         )
-    result = await provider.fetch_access(f"[web]-{user.name}")
+    result = await provider.fetch_access(f"web-{user.name}")
     response.headers["Cache-Control"] = "no-store"
     return result

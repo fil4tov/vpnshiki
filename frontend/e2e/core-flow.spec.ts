@@ -25,7 +25,9 @@ function planName(value: string) {
 test('administrator manages a user account until deletion', async ({ page }) => {
   const adminName = process.env.E2E_ADMIN_NAME ?? 'admin';
   const adminPassword = process.env.E2E_ADMIN_PASSWORD ?? 'change_me_now';
-  const memberName = `Участник-${Date.now()}`;
+  const adminMobileProfile = `${adminName}-mobile`;
+  const adminPcProfile = `${adminName}-pc`;
+  const memberName = 'Участник-e2e';
   const initialPassword = 'member-password';
   const nextPassword = 'member-password-next';
   const logout = async () => {
@@ -42,12 +44,22 @@ test('administrator manages a user account until deletion', async ({ page }) => 
   const vpnSection = page.getByRole('region', { name: 'Ваш VPN' });
   const subscriptionCard = vpnSection.getByRole('article', { name: 'Единая подписка' });
   await expect(subscriptionCard).toBeVisible();
+  const profileTabs = vpnSection.getByRole('tablist', { name: 'VPN-профили' });
+  await expect(profileTabs.getByRole('tab', { name: adminMobileProfile })).toHaveAttribute('aria-selected', 'true');
+  await expect(vpnSection.getByText(`ru-fin-vless-443-web-${adminMobileProfile}`)).toBeVisible();
   await expect(vpnSection.getByText('VLESS', { exact: true })).toBeVisible();
   await expect(vpnSection.getByText('Hysteria2', { exact: true })).toBeVisible();
   await subscriptionCard.getByRole('button', { name: 'Скопировать ссылку' }).click();
   await expect(page.getByRole('status')).toContainText('Ссылка скопирована');
   await subscriptionCard.getByRole('button', { name: 'Показать QR общей подписки' }).click();
-  await expect(page.getByRole('dialog', { name: 'Общая подписка' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: `Общая подписка — ${adminMobileProfile}` })).toBeVisible();
+  await page.getByRole('button', { name: 'Закрыть' }).click();
+  await profileTabs.getByRole('tab', { name: adminPcProfile }).click();
+  await expect(profileTabs.getByRole('tab', { name: adminPcProfile })).toHaveAttribute('aria-selected', 'true');
+  await expect(vpnSection.getByText(`ru-fin-vless-443-web-${adminPcProfile}`)).toBeVisible();
+  await expect(vpnSection.getByText(`ru-fin-vless-443-web-${adminMobileProfile}`)).toHaveCount(0);
+  await subscriptionCard.getByRole('button', { name: 'Показать QR общей подписки' }).click();
+  await expect(page.getByRole('dialog', { name: `Общая подписка — ${adminPcProfile}` })).toBeVisible();
   await page.getByRole('button', { name: 'Закрыть' }).click();
 
   await page.getByRole('button', { name: 'Включить светлую тему' }).click();
@@ -111,6 +123,7 @@ test('administrator manages a user account until deletion', async ({ page }) => 
   await expect(editDialog).toBeHidden();
   const memberRow = page.locator('tbody tr').filter({ hasText: memberName });
   await expect(memberRow.getByText('Заблокирован', { exact: true })).toBeVisible();
+  await expect(memberRow.getByText('Не в сети', { exact: true })).toBeVisible();
 
   await memberRow.getByRole('button', { name: `Открыть историю статуса ${memberName}` }).click();
   const statusHistoryDialog = page.getByRole('dialog', { name: 'История статуса' });

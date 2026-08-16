@@ -8,7 +8,7 @@ import httpx
 from app.config import Settings
 from app.errors import ApiError
 
-from .schemas import VpnAccessRead, VpnProfileRead
+from .schemas import VpnAccessRead, VpnClientProfileRead, VpnConnectionRead
 
 PROVIDER_TIMEOUT_SECONDS = 8.0
 logger = logging.getLogger(__name__)
@@ -57,7 +57,15 @@ def _response_payload(response: httpx.Response, *, missing_is_not_found: bool) -
     return payload
 
 
-def _parse_profile(url: str) -> VpnProfileRead:
+def profile_matches(email: str, profile_prefix: str) -> bool:
+    normalized_email = email.casefold()
+    normalized_prefix = profile_prefix.casefold()
+    return normalized_email == normalized_prefix or normalized_email.startswith(
+        f"{normalized_prefix}-"
+    )
+
+
+def _parse_profile(url: str) -> VpnConnectionRead:
     try:
         parsed = urlsplit(url)
         protocol = parsed.scheme.lower()
@@ -72,7 +80,7 @@ def _parse_profile(url: str) -> VpnProfileRead:
     security = query.get("security", [None])[0]
     if protocol == "hysteria2" and not security:
         security = "tls"
-    return VpnProfileRead(
+    return VpnConnectionRead(
         name=name,
         protocol=protocol,
         transport=transport.lower() if isinstance(transport, str) else None,
@@ -122,7 +130,7 @@ class XuiClient:
             raise _provider_unavailable()
         return provider_client
 
-    async def list_client_states(self) -> dict[str, bool]:
+    async def _list_clients(self) -> list[dict[str, Any]]:
         base_url, headers = self._connection()
         try:
             async with httpx.AsyncClient(
@@ -138,12 +146,26 @@ class XuiClient:
         clients = payload.get("obj")
         if isinstance(clients, dict):
             clients = clients.get("clients")
-        if not isinstance(clients, list):
+        if not isinstance(clients, list) or not all(
+            isinstance(item, dict) for item in clients
+        ):
             raise _provider_unavailable()
+        return clients
+
+    async def find_client_emails(self, profile_prefix: str) -> list[str]:
+        clients = await self._list_clients()
+        emails = {
+            email
+            for item in clients
+            if isinstance((email := item.get("email")), str)
+            and profile_matches(email, profile_prefix)
+        }
+        return sorted(emails, key=str.casefold)
+
+    async def list_client_states(self) -> dict[str, bool]:
+        clients = await self._list_clients()
         states: dict[str, bool] = {}
         for item in clients:
-            if not isinstance(item, dict):
-                raise _provider_unavailable()
             email = item.get("email")
             enabled = item.get("enable")
             if isinstance(email, str) and isinstance(enabled, bool):
@@ -168,7 +190,7 @@ class XuiClient:
             isinstance(email, str) for email in clients
         ):
             raise _provider_unavailable()
-        return {email for email in clients if email.startswith("[web]-")}
+        return {email for email in clients if email.casefold().startswith("web-")}
 
     async def set_enabled(self, email: str, enabled: bool) -> None:
         provider_client = await self.get_client(email)
@@ -229,14 +251,66 @@ class XuiClient:
             raise _provider_unavailable() from error
         _response_payload(response, missing_is_not_found=False)
 
-    async def fetch_access(self, email: str) -> VpnAccessRead:
+    async def set_matching_enabled(self, profile_prefix: str, enabled: bool) -> None:
+        emails = await self.find_client_emails(profile_prefix)
+        if not emails:
+            return
+        results = await asyncio.gather(
+            *(self.set_enabled(email, enabled) for email in emails),
+            return_exceptions=True,
+        )
+        errors = [result for result in results if isinstance(result, BaseException)]
+        if errors:
+            first_error = errors[0]
+            if isinstance(first_error, ApiError):
+                raise first_error
+            raise _provider_unavailable() from first_error
+
+    async def _fetch_client_profile(
+        self,
+        client: httpx.AsyncClient,
+        base_url: str,
+        subscription_url: str,
+        email: str,
+    ) -> VpnClientProfileRead:
+        encoded_email = quote(email, safe="")
+        client_response, links_response = await asyncio.gather(
+            client.get(f"{base_url}/clients/get/{encoded_email}"),
+            client.get(f"{base_url}/clients/links/{encoded_email}"),
+        )
+        client_payload = _response_payload(client_response, missing_is_not_found=False)
+        links_payload = _response_payload(links_response, missing_is_not_found=False)
+        try:
+            provider_client = client_payload["obj"]["client"]
+            sub_id = provider_client["subId"]
+            returned_email = provider_client["email"]
+            links = links_payload["obj"]
+        except (KeyError, TypeError) as error:
+            raise _provider_unavailable() from error
+        if (
+            returned_email != email
+            or not isinstance(sub_id, str)
+            or not sub_id.strip()
+            or not isinstance(links, list)
+            or not all(isinstance(link, str) for link in links)
+        ):
+            raise _provider_unavailable()
+        return VpnClientProfileRead(
+            email=email,
+            label=email[4:],
+            subscription_url=(
+                f"{subscription_url.rstrip('/')}/{quote(sub_id, safe='')}"
+            ),
+            connections=[_parse_profile(link) for link in links],
+        )
+
+    async def fetch_access(self, profile_prefix: str) -> VpnAccessRead:
         api_url = self._settings.x_ui_api_url
         token = self._settings.x_ui_token
         subscription_url = self._settings.x_ui_subscription_url
         if not api_url or token is None or not subscription_url:
             raise _unconfigured()
 
-        encoded_email = quote(email, safe="")
         base_url = api_url.rstrip("/")
         headers = {"Authorization": f"Bearer {token.get_secret_value()}"}
         try:
@@ -246,26 +320,36 @@ class XuiClient:
                 follow_redirects=False,
                 transport=self._transport,
             ) as client:
-                client_response, links_response = await asyncio.gather(
-                    client.get(f"{base_url}/clients/get/{encoded_email}"),
-                    client.get(f"{base_url}/clients/links/{encoded_email}"),
+                list_response = await client.get(f"{base_url}/clients/list")
+                list_payload = _response_payload(
+                    list_response, missing_is_not_found=False
+                )
+                clients = list_payload.get("obj")
+                if isinstance(clients, dict):
+                    clients = clients.get("clients")
+                if not isinstance(clients, list) or not all(
+                    isinstance(item, dict) for item in clients
+                ):
+                    raise _provider_unavailable()
+                emails = sorted(
+                    {
+                        email
+                        for item in clients
+                        if isinstance((email := item.get("email")), str)
+                        and profile_matches(email, profile_prefix)
+                    },
+                    key=str.casefold,
+                )
+                if not emails:
+                    raise _profile_not_found()
+                profiles = await asyncio.gather(
+                    *(
+                        self._fetch_client_profile(
+                            client, base_url, subscription_url, email
+                        )
+                        for email in emails
+                    )
                 )
         except httpx.HTTPError as error:
             raise _provider_unavailable() from error
-
-        client_payload = _response_payload(client_response, missing_is_not_found=True)
-        links_payload = _response_payload(links_response, missing_is_not_found=False)
-        try:
-            sub_id = client_payload["obj"]["client"]["subId"]
-            links = links_payload["obj"]
-        except (KeyError, TypeError) as error:
-            raise _provider_unavailable() from error
-        if not isinstance(sub_id, str) or not sub_id.strip() or not isinstance(links, list):
-            raise _provider_unavailable()
-        if not all(isinstance(link, str) for link in links):
-            raise _provider_unavailable()
-
-        return VpnAccessRead(
-            subscription_url=f"{subscription_url.rstrip('/')}/{quote(sub_id, safe='')}",
-            profiles=[_parse_profile(link) for link in links],
-        )
+        return VpnAccessRead(profiles=list(profiles))

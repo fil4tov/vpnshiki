@@ -93,7 +93,7 @@ export function UsersPage() {
       </header>
       <section className={styles.summary} aria-label="Сводка пользователей">
         <Surface><FiUsers /><div><span>Всего</span><strong>{usersQuery.data?.length ?? 0}</strong></div></Surface>
-        <Surface><span className={styles.liveDot} /><div><span>Участвуют</span><strong>{activeCount}</strong></div></Surface>
+        <Surface><span className={styles.liveDot} /><div><span>Активны</span><strong>{activeCount}</strong></div></Surface>
         <Surface><span className={styles.pausedDot} /><div><span>Приостановлены</span><strong>{pausedCount}</strong></div></Surface>
         <Surface><span className={styles.blockedDot} /><div><span>Заблокированы</span><strong>{blockedCount}</strong></div></Surface>
       </section>

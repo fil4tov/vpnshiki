@@ -1,4 +1,4 @@
-export interface VpnProfile {
+export interface VpnConnection {
   name: string;
   protocol: string;
   transport: string | null;
@@ -6,7 +6,13 @@ export interface VpnProfile {
   url: string;
 }
 
-export interface VpnAccess {
+export interface VpnClientProfile {
+  email: string;
+  label: string;
   subscription_url: string;
-  profiles: VpnProfile[];
+  connections: VpnConnection[];
+}
+
+export interface VpnAccess {
+  profiles: VpnClientProfile[];
 }

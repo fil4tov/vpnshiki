@@ -11,7 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.errors import ApiError
 from app.tariff_plans.models import TariffPlan
 from app.users.models import AccountStatus, User
-from app.vpn_access.service import XuiClient
+from app.vpn_access.service import XuiClient, profile_matches
 
 from .models import (
     BillingRun,
@@ -37,7 +37,7 @@ def billing_timestamp(billing_date: date) -> datetime:
 
 
 def profile_email(user: User) -> str:
-    return f"[web]-{user.name}"
+    return f"web-{user.name}"
 
 
 async def record_status_change(
@@ -398,7 +398,11 @@ async def sync_paused_profiles(
         await db.commit()
         return
     for user in paused_users:
-        if states.get(profile_email(user)) is True:
+        prefix = profile_email(user)
+        if any(
+            enabled and profile_matches(email, prefix)
+            for email, enabled in states.items()
+        ):
             await queue_vpn_sync(db, user.id, False)
     await db.commit()
 
@@ -431,7 +435,9 @@ async def process_vpn_sync_jobs(
                 await db.commit()
                 continue
             try:
-                await provider.set_enabled(profile_email(user), job.desired_enabled)
+                await provider.set_matching_enabled(
+                    profile_email(user), job.desired_enabled
+                )
             except ApiError as error:
                 if error.code == "vpn_profile_not_found" and not job.desired_enabled:
                     await db.delete(job)

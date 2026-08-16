@@ -40,8 +40,12 @@ describe('OverviewPage', () => {
     useUserStore.setState({ user, status: 'authenticated' });
     vi.mocked(getMyDailyCharge).mockResolvedValue({ daily_charge: '50.00' });
     vi.mocked(getMyVpnAccess).mockResolvedValue({
-      subscription_url: 'https://subscription.example.test/test',
-      profiles: [],
+      profiles: [{
+        email: 'web-Миша-mobile',
+        label: 'Миша-mobile',
+        subscription_url: 'https://subscription.example.test/test',
+        connections: [],
+      }],
     });
   });
 

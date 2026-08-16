@@ -21,7 +21,7 @@ class FakeStatusXuiClient:
         self.updates: list[tuple[str, bool]] = []
         self.online_clients = online_clients or set()
 
-    async def set_enabled(self, email: str, enabled: bool) -> None:
+    async def set_matching_enabled(self, email: str, enabled: bool) -> None:
         self.updates.append((email, enabled))
 
     async def list_online_clients(self) -> set[str]:
@@ -29,7 +29,7 @@ class FakeStatusXuiClient:
 
 
 class FailingStatusXuiClient:
-    async def set_enabled(self, _email: str, _enabled: bool) -> None:
+    async def set_matching_enabled(self, _email: str, _enabled: bool) -> None:
         raise ApiError(
             status_code=502,
             code="vpn_provider_unavailable",
@@ -71,7 +71,7 @@ async def test_admin_creates_and_updates_user(
     client: AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    provider = FakeStatusXuiClient({"[web]-Лена"})
+    provider = FakeStatusXuiClient({"web-Лена-mobile"})
     app.dependency_overrides[get_xui_client] = lambda: provider
     await login(client)
     created = await client.post(
@@ -96,7 +96,7 @@ async def test_admin_creates_and_updates_user(
     assert updated.status_code == 200
     assert updated.json()["account_status"] == "blocked"
     assert updated.json()["balance"] == "12.34"
-    assert provider.updates == [("[web]-Лена", False)]
+    assert provider.updates == [("web-Лена", False)]
 
     async with session_factory() as db:
         plan = TariffPlan(
@@ -214,6 +214,8 @@ async def test_daily_charge_uses_current_plan_and_active_users(
     admin: User,
     monkeypatch,
 ) -> None:
+    provider = FakeStatusXuiClient()
+    app.dependency_overrides[get_xui_client] = lambda: provider
     monkeypatch.setattr("app.tariff_plans.service.moscow_today", lambda: date(2026, 8, 16))
     async with session_factory() as db:
         db.add(
@@ -235,6 +237,7 @@ async def test_daily_charge_uses_current_plan_and_active_users(
         f"/api/admin/users/{admin.id}",
         json={"account_status": "paused"},
     )
+    assert provider.updates == [("web-admin", False)]
     paused_response = await client.get("/api/users/me/daily-charge")
     assert paused_response.json() == {"daily_charge": "0.00"}
 
@@ -323,7 +326,7 @@ async def test_admin_deletes_user_and_revokes_sessions(
                 )
             ).all()
             assert [item.new_status for item in history] == ["active", "blocked"]
-        assert provider.updates == [("[web]-Удаляемый", False)]
+        assert provider.updates == [("web-Удаляемый", False)]
         assert (await login(user_client, "Удаляемый", "user-password")).status_code == 401
         assert all(
             item["id"] != str(user_id)

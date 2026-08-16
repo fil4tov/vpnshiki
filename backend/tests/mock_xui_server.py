@@ -12,7 +12,7 @@ class Handler(BaseHTTPRequestHandler):
         if email not in CLIENTS:
             CLIENTS[email] = {
                 "email": email,
-                "subId": f"e2e-{email.removeprefix('[web]-')}",
+                "subId": f"e2e-{email.removeprefix('web-')}",
                 "id": len(CLIENTS) + 1,
                 "uuid": f"e2e-id-{email}",
                 "password": "e2e-password",
@@ -128,4 +128,13 @@ class Handler(BaseHTTPRequestHandler):
 
 
 if __name__ == "__main__":
+    for seeded_email in (
+        "web-admin-mobile",
+        "web-admin-pc",
+        "web-e2e-admin-mobile",
+        "web-e2e-admin-pc",
+        "web-Участник-e2e-mobile",
+        "web-Участник-e2e-pc",
+    ):
+        Handler._client(seeded_email)
     ThreadingHTTPServer(("0.0.0.0", 9084), Handler).serve_forever()

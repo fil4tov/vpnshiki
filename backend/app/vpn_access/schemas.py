@@ -1,7 +1,7 @@
 from pydantic import BaseModel
 
 
-class VpnProfileRead(BaseModel):
+class VpnConnectionRead(BaseModel):
     name: str
     protocol: str
     transport: str | None
@@ -9,6 +9,12 @@ class VpnProfileRead(BaseModel):
     url: str
 
 
-class VpnAccessRead(BaseModel):
+class VpnClientProfileRead(BaseModel):
+    email: str
+    label: str
     subscription_url: str
-    profiles: list[VpnProfileRead]
+    connections: list[VpnConnectionRead]
+
+
+class VpnAccessRead(BaseModel):
+    profiles: list[VpnClientProfileRead]

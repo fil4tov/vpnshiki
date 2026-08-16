@@ -1,14 +1,14 @@
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { FiAlertCircle, FiLock, FiPauseCircle, FiRefreshCw } from 'react-icons/fi';
 
 import { getMyVpnAccess, myVpnAccessKey } from '#entities/vpnAccess';
-import type { VpnProfile } from '#entities/vpnAccess';
+import type { VpnConnection } from '#entities/vpnAccess';
 import type { AccountStatus } from '#entities/user';
 import { ApiError } from '#shared/api';
 import { Button } from '#shared/ui';
 
-import { ProfileList, SubscriptionCard, VpnQrModal } from './components';
+import { ProfileList, ProfileTabs, SubscriptionCard, VpnQrModal } from './components';
 import styles from './VpnAccessPanel.module.scss';
 import { copyToClipboard } from './utils';
 
@@ -21,6 +21,14 @@ interface VpnAccessPanelProps {
   accountStatus: AccountStatus;
 }
 
+function profileCountLabel(count: number) {
+  const remainder = count % 100;
+  if (remainder >= 11 && remainder <= 14) return `${count} профилей`;
+  if (count % 10 === 1) return `${count} профиль`;
+  if (count % 10 >= 2 && count % 10 <= 4) return `${count} профиля`;
+  return `${count} профилей`;
+}
+
 export function VpnAccessPanel({ accountStatus }: VpnAccessPanelProps) {
   const active = accountStatus === 'active';
   const accessQuery = useQuery({
@@ -30,7 +38,10 @@ export function VpnAccessPanel({ accountStatus }: VpnAccessPanelProps) {
   });
   const [qrTarget, setQrTarget] = useState<QrTarget | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [preferredEmail, setPreferredEmail] = useState<string | null>(null);
   const noticeTimer = useRef<number | null>(null);
+  const profilePanelId = `${useId()}-vpn-profile-panel`;
+  const profileTabIdPrefix = `${profilePanelId}-tab`;
 
   useEffect(() => () => {
     if (noticeTimer.current !== null) window.clearTimeout(noticeTimer.current);
@@ -50,7 +61,9 @@ export function VpnAccessPanel({ accountStatus }: VpnAccessPanelProps) {
     return successful;
   };
 
-  const showProfileQr = (profile: VpnProfile) => setQrTarget({ title: profile.name, url: profile.url });
+  const showConnectionQr = (connection: VpnConnection) => {
+    setQrTarget({ title: connection.name, url: connection.url });
+  };
 
   if (!active) {
     const blocked = accountStatus === 'blocked';
@@ -98,18 +111,65 @@ export function VpnAccessPanel({ accountStatus }: VpnAccessPanelProps) {
   }
 
   const access = accessQuery.data;
+  const selectedProfile = access.profiles.find((profile) => profile.email === preferredEmail)
+    ?? access.profiles[0];
+  if (!selectedProfile) {
+    return (
+      <section className={styles.section} aria-labelledby="vpn-heading">
+        <div className={styles.heading}><h2 id="vpn-heading">Ваш VPN</h2></div>
+        <div className={styles.errorState} role="alert">
+          <span className={styles.stateIcon}><FiAlertCircle /></span>
+          <div>
+            <h3>VPN-профиль не найден</h3>
+            <p>Обратитесь к администратору — он проверит профиль и настройки панели.</p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+  const selectedIndex = access.profiles.indexOf(selectedProfile);
+  const multipleProfiles = access.profiles.length > 1;
+  const selectProfile = (email: string) => {
+    setPreferredEmail(email);
+    setQrTarget(null);
+  };
+  const subscriptionQrTitle = multipleProfiles
+    ? `Общая подписка — ${selectedProfile.label}`
+    : 'Общая подписка';
+
   return (
     <section className={styles.section} aria-labelledby="vpn-heading">
       <div className={styles.heading}>
         <h2 id="vpn-heading">Ваш VPN</h2>
-        <span>{access.profiles.length} {access.profiles.length === 1 ? 'подключение' : 'подключения'}</span>
+        <span>{profileCountLabel(access.profiles.length)}</span>
       </div>
-      <div className={styles.layout}>
-        <SubscriptionCard
-          onCopy={() => copy(access.subscription_url)}
-          onShowQr={() => setQrTarget({ title: 'Общая подписка', url: access.subscription_url })}
+      {multipleProfiles && (
+        <ProfileTabs
+          profiles={access.profiles}
+          selectedEmail={selectedProfile.email}
+          panelId={profilePanelId}
+          idPrefix={profileTabIdPrefix}
+          onSelect={selectProfile}
         />
-        <ProfileList profiles={access.profiles} onCopy={copy} onShowQr={showProfileQr} />
+      )}
+      <div
+        className={styles.layout}
+        id={profilePanelId}
+        role={multipleProfiles ? 'tabpanel' : undefined}
+        aria-labelledby={multipleProfiles ? `${profileTabIdPrefix}-${selectedIndex}` : undefined}
+      >
+        <SubscriptionCard
+          onCopy={() => copy(selectedProfile.subscription_url)}
+          onShowQr={() => setQrTarget({
+            title: subscriptionQrTitle,
+            url: selectedProfile.subscription_url,
+          })}
+        />
+        <ProfileList
+          connections={selectedProfile.connections}
+          onCopy={copy}
+          onShowQr={showConnectionQr}
+        />
       </div>
       <VpnQrModal
         open={qrTarget !== null}

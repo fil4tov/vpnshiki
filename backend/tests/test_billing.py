@@ -15,6 +15,7 @@ from app.billing.service import (
     catch_up_billing,
     process_billing_date,
     process_vpn_sync_jobs,
+    sync_paused_profiles,
 )
 from app.errors import ApiError
 from app.tariff_plans.models import TariffPlan
@@ -167,7 +168,7 @@ class EventuallyAvailableProvider:
     def __init__(self) -> None:
         self.calls = 0
 
-    async def set_enabled(self, _email: str, _enabled: bool) -> None:
+    async def set_matching_enabled(self, _email: str, _enabled: bool) -> None:
         self.calls += 1
         if self.calls == 1:
             raise ApiError(
@@ -175,6 +176,32 @@ class EventuallyAvailableProvider:
                 code="vpn_provider_unavailable",
                 message="VPN-панель временно недоступна",
             )
+
+
+class ProfileStateProvider:
+    async def list_client_states(self) -> dict[str, bool]:
+        return {
+            "web-admin-mobile": True,
+            "web-admin-pc": False,
+            "web-admin2-mobile": True,
+            "[web]-admin": True,
+        }
+
+
+async def test_paused_profile_sync_queues_one_job_when_any_matching_profile_is_enabled(
+    session_factory, admin
+) -> None:
+    async with session_factory() as db:
+        user = await db.get(User, admin.id)
+        assert user is not None
+        user.account_status = AccountStatus.PAUSED.value
+        await db.commit()
+
+        await sync_paused_profiles(db, ProfileStateProvider())
+
+        job = await db.scalar(select(VpnSyncJob).where(VpnSyncJob.user_id == user.id))
+        assert job is not None
+        assert job.desired_enabled is False
 
 
 async def test_automatic_vpn_failure_remains_queued_for_retry(
