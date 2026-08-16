@@ -1,5 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
+from enum import StrEnum
 from typing import Annotated
 from uuid import UUID
 
@@ -10,6 +11,12 @@ from app.users.models import AccountStatus, UserRole
 Name = Annotated[str, StringConstraints(strip_whitespace=True, min_length=2, max_length=64)]
 Password = Annotated[str, StringConstraints(min_length=8, max_length=128)]
 Money = Annotated[Decimal, Field(max_digits=14, decimal_places=2)]
+
+
+class VpnStatus(StrEnum):
+    ONLINE = "online"
+    OFFLINE = "offline"
+    UNKNOWN = "unknown"
 
 
 class UserRead(BaseModel):
@@ -31,6 +38,7 @@ class UserRead(BaseModel):
 
 class AdminUserRead(UserRead):
     total_charged: Decimal
+    vpn_status: VpnStatus = Field(serialization_alias="vpnStatus")
 
     @field_serializer("total_charged")
     def serialize_total_charged(self, value: Decimal) -> str:

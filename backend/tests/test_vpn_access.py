@@ -251,6 +251,29 @@ async def test_client_lists_profile_states() -> None:
     assert states == {"[web]-one": True, "[web]-two": False}
 
 
+async def test_client_lists_online_web_profiles() -> None:
+    requests: list[httpx.Request] = []
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request)
+        return httpx.Response(
+            200,
+            json={
+                "success": True,
+                "obj": ["[web]-one", "telegram-user", "[web]-two", "[web]-one"],
+            },
+        )
+
+    clients = await XuiClient(
+        vpn_settings(), transport=httpx.MockTransport(handler)
+    ).list_online_clients()
+
+    assert clients == {"[web]-one", "[web]-two"}
+    assert [(request.method, request.url.path) for request in requests] == [
+        ("POST", "/base/panel/api/clients/onlines")
+    ]
+
+
 class FakeXuiClient:
     def __init__(self) -> None:
         self.emails: list[str] = []

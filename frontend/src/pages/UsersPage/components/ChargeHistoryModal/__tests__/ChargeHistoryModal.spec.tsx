@@ -20,6 +20,7 @@ const adminUser: AdminUser = {
   balance: '0.00',
   negative_balance_limit: '500.00',
   total_charged: '96.78',
+  vpnStatus: 'online',
   account_status: 'active',
   created_at: '2026-08-01T00:00:00Z',
   updated_at: '2026-08-01T00:00:00Z',

@@ -150,6 +150,26 @@ class XuiClient:
                 states[email] = enabled
         return states
 
+    async def list_online_clients(self) -> set[str]:
+        base_url, headers = self._connection()
+        try:
+            async with httpx.AsyncClient(
+                headers=headers,
+                timeout=PROVIDER_TIMEOUT_SECONDS,
+                follow_redirects=False,
+                transport=self._transport,
+            ) as client:
+                response = await client.post(f"{base_url}/clients/onlines")
+        except httpx.HTTPError as error:
+            raise _provider_unavailable() from error
+        payload = _response_payload(response, missing_is_not_found=False)
+        clients = payload.get("obj")
+        if not isinstance(clients, list) or not all(
+            isinstance(email, str) for email in clients
+        ):
+            raise _provider_unavailable()
+        return {email for email in clients if email.startswith("[web]-")}
+
     async def set_enabled(self, email: str, enabled: bool) -> None:
         provider_client = await self.get_client(email)
         required_fields = (

@@ -35,7 +35,7 @@ test('administrator manages a user account until deletion', async ({ page }) => 
 
   await page.goto('/login');
   await page.getByLabel('Имя').fill(adminName);
-  await page.getByLabel('Пароль').fill(adminPassword);
+  await page.getByLabel('Пароль', { exact: true }).fill(adminPassword);
   await page.getByRole('button', { name: 'Войти' }).click();
   await expect(page.getByRole('heading', { name: new RegExp(`Привет, ${adminName}`) })).toBeVisible();
 
@@ -70,7 +70,7 @@ test('administrator manages a user account until deletion', async ({ page }) => 
   };
   page.on('request', countBlockedVpnRequests);
   await page.getByLabel('Имя').fill(memberName);
-  await page.getByLabel('Пароль').fill(initialPassword);
+  await page.getByLabel('Пароль', { exact: true }).fill(initialPassword);
   await page.getByRole('button', { name: 'Войти' }).click();
   await expect(page.getByRole('heading', { name: `Привет, ${memberName}` })).toBeVisible();
   await expect(page.getByRole('switch', { name: 'Участие в программе' })).toHaveCount(0);
@@ -86,7 +86,7 @@ test('administrator manages a user account until deletion', async ({ page }) => 
 
   await logout();
   await page.getByLabel('Имя').fill(adminName);
-  await page.getByLabel('Пароль').fill(adminPassword);
+  await page.getByLabel('Пароль', { exact: true }).fill(adminPassword);
   await page.getByRole('button', { name: 'Войти' }).click();
   await page.getByRole('link', { name: 'Админ-панель' }).click();
   await page.getByRole('button', { name: `Редактировать ${memberName}` }).click();
@@ -100,7 +100,7 @@ test('administrator manages a user account until deletion', async ({ page }) => 
 
   await logout();
   await page.getByLabel('Имя').fill(memberName);
-  await page.getByLabel('Пароль').fill(nextPassword);
+  await page.getByLabel('Пароль', { exact: true }).fill(nextPassword);
   await page.getByRole('button', { name: 'Войти' }).click();
   await expect(page.getByText('Аккаунт заблокирован')).toBeVisible();
   await expect(page.getByText('VPN доступен только для активного аккаунта')).toBeVisible();
@@ -110,7 +110,7 @@ test('administrator manages a user account until deletion', async ({ page }) => 
 
   await logout();
   await page.getByLabel('Имя').fill(adminName);
-  await page.getByLabel('Пароль').fill(adminPassword);
+  await page.getByLabel('Пароль', { exact: true }).fill(adminPassword);
   await page.getByRole('button', { name: 'Войти' }).click();
   await page.getByRole('link', { name: 'Админ-панель' }).click();
   const deleteRow = page.locator('tbody tr').filter({ hasText: memberName });
@@ -131,7 +131,7 @@ test('administrator maintains a continuous tariff plan schedule', async ({ page 
 
   await page.goto('/login');
   await page.getByLabel('Имя').fill(adminName);
-  await page.getByLabel('Пароль').fill(adminPassword);
+  await page.getByLabel('Пароль', { exact: true }).fill(adminPassword);
   await page.getByRole('button', { name: 'Войти' }).click();
   await page.getByRole('link', { name: 'Админ-панель' }).click();
   await page.getByRole('link', { name: 'Тарифные планы' }).click();

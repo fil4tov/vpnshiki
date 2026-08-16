@@ -20,6 +20,7 @@ from app.users.schemas import (
     AdminUserUpdate,
     UserChargeRead,
     UserRead,
+    VpnStatus,
 )
 from app.vpn_access.dependencies import XuiProvider
 
@@ -51,7 +52,11 @@ async def _commit_unique(db: Database) -> None:
 
 
 @router.get("", response_model=list[AdminUserRead])
-async def list_users(_admin: CurrentAdmin, db: Database) -> list[AdminUserRead]:
+async def list_users(
+    _admin: CurrentAdmin,
+    db: Database,
+    provider: XuiProvider,
+) -> list[AdminUserRead]:
     charge_totals = (
         select(
             UserDailyCharge.user_id,
@@ -71,11 +76,22 @@ async def list_users(_admin: CurrentAdmin, db: Database) -> list[AdminUserRead]:
             .order_by(func.lower(User.name))
         )
     ).all()
+    try:
+        online_clients = await provider.list_online_clients()
+    except ApiError:
+        online_clients = None
     return [
         AdminUserRead.model_validate(
             {
                 **UserRead.model_validate(user).model_dump(),
                 "total_charged": total_charged,
+                "vpn_status": (
+                    VpnStatus.UNKNOWN
+                    if online_clients is None
+                    else VpnStatus.ONLINE
+                    if profile_email(user) in online_clients
+                    else VpnStatus.OFFLINE
+                ),
             }
         )
         for user, total_charged in rows

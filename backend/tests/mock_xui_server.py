@@ -81,6 +81,18 @@ class Handler(BaseHTTPRequestHandler):
         if self.headers.get("Authorization") != TOKEN:
             self._send(401, {"success": False, "msg": "Unauthorized", "obj": None})
             return
+        if path == "/panel/api/clients/onlines":
+            self._send(
+                200,
+                {
+                    "success": True,
+                    "msg": "",
+                    "obj": [
+                        email for email, client in CLIENTS.items() if client["enable"]
+                    ],
+                },
+            )
+            return
         if not path.startswith("/panel/api/clients/update/"):
             self._send(404, {"success": False, "msg": "Not found", "obj": None})
             return

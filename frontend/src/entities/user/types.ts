@@ -1,5 +1,6 @@
 export type UserRole = 'admin' | 'user';
 export type AccountStatus = 'active' | 'paused' | 'blocked';
+export type VpnStatus = 'online' | 'offline' | 'unknown';
 
 export interface User {
   id: string;
@@ -14,6 +15,7 @@ export interface User {
 
 export interface AdminUser extends User {
   total_charged: string;
+  vpnStatus: VpnStatus;
 }
 
 export interface UserCharge {

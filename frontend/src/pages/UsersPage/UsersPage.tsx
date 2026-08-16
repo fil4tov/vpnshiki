@@ -18,6 +18,12 @@ import { Badge, Button, LoadingState, Modal, Surface, TableActionButton } from '
 import { ChargeHistoryModal, DeleteUserConfirmation, ResetPasswordForm, UserForm } from './components';
 import styles from './UsersPage.module.scss';
 
+const vpnStatusView = {
+  online: { label: 'В сети', tone: 'positive' },
+  offline: { label: 'Не в сети', tone: 'neutral' },
+  unknown: { label: 'Неизвестно', tone: 'warning' },
+} as const;
+
 export function UsersPage() {
   const currentUser = useUserStore((state) => state.user)!;
   const setCurrentUser = useUserStore((state) => state.setUser);
@@ -96,11 +102,13 @@ export function UsersPage() {
         ) : (
           <div className={styles.tableWrap}>
             <table>
-              <thead><tr><th>Пользователь</th><th>Статус</th><th>Баланс</th><th>Лимит</th><th>Всего списаний</th><th>История списаний</th><th><span className={styles.srOnly}>Действия</span></th></tr></thead>
-              <tbody>{users.map((user) => (
-                <tr key={user.id}>
+              <thead><tr><th>Пользователь</th><th>Статус</th><th>VPN</th><th>Баланс</th><th>Лимит</th><th>Всего списаний</th><th>История списаний</th><th><span className={styles.srOnly}>Действия</span></th></tr></thead>
+              <tbody>{users.map((user) => {
+                const vpnView = vpnStatusView[user.vpnStatus];
+                return <tr key={user.id}>
                   <td data-label="Пользователь"><div className={styles.person}><span>{user.name.slice(0, 1).toUpperCase()}</span><div><strong>{user.name}</strong><small>{user.role === 'admin' ? 'Администратор' : 'Участник'}</small></div></div></td>
                   <td data-label="Статус"><Badge tone={user.account_status === 'blocked' ? 'danger' : user.account_status === 'active' ? 'positive' : 'warning'}>{user.account_status === 'blocked' ? 'Заблокирован' : user.account_status === 'active' ? 'Активен' : 'Приостановлен'}</Badge></td>
+                  <td data-label="VPN" className={styles.vpnStatus}><Badge tone={vpnView.tone}>{vpnView.label}</Badge></td>
                   <td
                     data-label="Баланс"
                     className={`${styles.money} ${isNegativeMoney(user.balance) ? styles.negativeMoney : ''}`}
@@ -129,8 +137,8 @@ export function UsersPage() {
                       <FiTrash2 />
                     </button>
                   </td>
-                </tr>
-              ))}</tbody>
+                </tr>;
+              })}</tbody>
             </table>
           </div>
         )}

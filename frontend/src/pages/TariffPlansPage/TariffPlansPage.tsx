@@ -113,7 +113,7 @@ export function TariffPlansPage() {
           <div className={styles.tableWrap}>
             <table>
               <thead>
-                <tr><th>Название</th><th>Сумма за месяц</th><th>Начало</th><th>Окончание</th><th>Статус</th><th>История списаний</th><th><span className={styles.srOnly}>Действия</span></th></tr>
+                <tr><th>Название</th><th>Статус</th><th>Сумма за месяц</th><th>Начало</th><th>Окончание</th><th>История списаний</th><th><span className={styles.srOnly}>Действия</span></th></tr>
               </thead>
               <tbody>{displayedPlans.map((plan) => {
                 const view = statusView[plan.status];
@@ -125,10 +125,10 @@ export function TariffPlansPage() {
                         <strong>{plan.name}</strong>
                       </div>
                     </td>
+                    <td data-label="Статус"><Badge tone={view.tone}>{view.label}</Badge></td>
                     <td data-label="Сумма" className={styles.money}>{formatMoney(plan.monthly_amount)}</td>
                     <td data-label="Начало" className={styles.date}><time dateTime={plan.start_date}>{formatCalendarDate(plan.start_date)}</time></td>
                     <td data-label="Окончание" className={styles.date}>{plan.end_date ? <time dateTime={plan.end_date}>{formatCalendarDate(plan.end_date)}</time> : 'Бессрочно'}</td>
-                    <td data-label="Статус"><Badge tone={view.tone}>{view.label}</Badge></td>
                     <td data-label="История списаний">
                       <TableActionButton
                         aria-label={`Открыть историю списаний ${plan.name}`}

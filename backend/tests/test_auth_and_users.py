@@ -17,15 +17,26 @@ from app.vpn_access.dependencies import get_xui_client
 
 
 class FakeStatusXuiClient:
-    def __init__(self) -> None:
+    def __init__(self, online_clients: set[str] | None = None) -> None:
         self.updates: list[tuple[str, bool]] = []
+        self.online_clients = online_clients or set()
 
     async def set_enabled(self, email: str, enabled: bool) -> None:
         self.updates.append((email, enabled))
 
+    async def list_online_clients(self) -> set[str]:
+        return self.online_clients
+
 
 class FailingStatusXuiClient:
     async def set_enabled(self, _email: str, _enabled: bool) -> None:
+        raise ApiError(
+            status_code=502,
+            code="vpn_provider_unavailable",
+            message="VPN-панель временно недоступна",
+        )
+
+    async def list_online_clients(self) -> set[str]:
         raise ApiError(
             status_code=502,
             code="vpn_provider_unavailable",
@@ -60,7 +71,7 @@ async def test_admin_creates_and_updates_user(
     client: AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    provider = FakeStatusXuiClient()
+    provider = FakeStatusXuiClient({"[web]-Лена"})
     app.dependency_overrides[get_xui_client] = lambda: provider
     await login(client)
     created = await client.post(
@@ -118,6 +129,10 @@ async def test_admin_creates_and_updates_user(
     assert {user["name"]: user["total_charged"] for user in users} == {
         "admin": "0.00",
         "Лена": "30.75",
+    }
+    assert {user["name"]: user["vpnStatus"] for user in users} == {
+        "admin": "offline",
+        "Лена": "online",
     }
     history = (await client.get(f"/api/admin/users/{user_id}/charges")).json()
     assert [entry["created_at"][:10] for entry in history] == ["2026-08-02", "2026-08-01"]
@@ -227,6 +242,16 @@ async def test_provider_failure_rejects_manual_status_change(
             )
         ).all()
         assert [item.new_status for item in statuses] == [AccountStatus.ACTIVE.value]
+
+
+async def test_provider_failure_marks_vpn_status_unknown(client: AsyncClient) -> None:
+    await login(client)
+    app.dependency_overrides[get_xui_client] = lambda: FailingStatusXuiClient()
+
+    response = await client.get("/api/admin/users")
+
+    assert response.status_code == 200
+    assert {item["vpnStatus"] for item in response.json()} == {"unknown"}
 
 
 async def test_admin_deletes_user_and_revokes_sessions(
