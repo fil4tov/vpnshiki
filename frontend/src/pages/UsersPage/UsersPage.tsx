@@ -15,7 +15,13 @@ import type { AdminUser, AdminUserPayload, AdminUserUpdatePayload, User } from '
 import { formatMoney, isNegativeMoney } from '#shared/lib/money';
 import { Badge, Button, LoadingState, Modal, Surface, TableActionButton } from '#shared/ui';
 
-import { ChargeHistoryModal, DeleteUserConfirmation, ResetPasswordForm, UserForm } from './components';
+import {
+  ChargeHistoryModal,
+  DeleteUserConfirmation,
+  ResetPasswordForm,
+  StatusHistoryModal,
+  UserForm,
+} from './components';
 import styles from './UsersPage.module.scss';
 
 const vpnStatusView = {
@@ -34,6 +40,7 @@ export function UsersPage() {
   const [editing, setEditing] = useState<User | null>(null);
   const [resetting, setResetting] = useState<User | null>(null);
   const [historyUser, setHistoryUser] = useState<AdminUser | null>(null);
+  const [statusHistoryUser, setStatusHistoryUser] = useState<AdminUser | null>(null);
   const [deleting, setDeleting] = useState<User | null>(null);
   const usersQuery = useQuery({ queryKey: adminUsersKey, queryFn: getUsers });
 
@@ -102,12 +109,24 @@ export function UsersPage() {
         ) : (
           <div className={styles.tableWrap}>
             <table>
-              <thead><tr><th>Пользователь</th><th>Статус</th><th>VPN</th><th>Баланс</th><th>Лимит</th><th>Всего списаний</th><th>История списаний</th><th><span className={styles.srOnly}>Действия</span></th></tr></thead>
+              <thead><tr><th>Пользователь</th><th>Статус</th><th>VPN</th><th>Баланс</th><th>Лимит</th><th>Всего списаний</th><th><span className={styles.srOnly}>Действия</span></th></tr></thead>
               <tbody>{users.map((user) => {
                 const vpnView = vpnStatusView[user.vpnStatus];
                 return <tr key={user.id}>
                   <td data-label="Пользователь"><div className={styles.person}><span>{user.name.slice(0, 1).toUpperCase()}</span><div><strong>{user.name}</strong><small>{user.role === 'admin' ? 'Администратор' : 'Участник'}</small></div></div></td>
-                  <td data-label="Статус"><Badge tone={user.account_status === 'blocked' ? 'danger' : user.account_status === 'active' ? 'positive' : 'warning'}>{user.account_status === 'blocked' ? 'Заблокирован' : user.account_status === 'active' ? 'Активен' : 'Приостановлен'}</Badge></td>
+                  <td data-label="Статус">
+                    <div className={styles.statusValue}>
+                      <Badge tone={user.account_status === 'blocked' ? 'danger' : user.account_status === 'active' ? 'positive' : 'warning'}>{user.account_status === 'blocked' ? 'Заблокирован' : user.account_status === 'active' ? 'Активен' : 'Приостановлен'}</Badge>
+                      <TableActionButton
+                        className={styles.historyButton}
+                        title="История статуса"
+                        onClick={() => setStatusHistoryUser(user)}
+                        aria-label={`Открыть историю статуса ${user.name}`}
+                      >
+                        <FiClock aria-hidden="true" />
+                      </TableActionButton>
+                    </div>
+                  </td>
                   <td data-label="VPN" className={styles.vpnStatus}><Badge tone={vpnView.tone}>{vpnView.label}</Badge></td>
                   <td
                     data-label="Баланс"
@@ -116,12 +135,18 @@ export function UsersPage() {
                     {formatMoney(user.balance)}
                   </td>
                   <td data-label="Лимит" className={styles.money}>{formatMoney(user.negative_balance_limit)}</td>
-                  <td data-label="Всего списаний" className={styles.money}>{formatMoney(user.total_charged)}</td>
-                  <td data-label="История списаний" className={styles.historyCell}>
-                    <TableActionButton onClick={() => setHistoryUser(user)} aria-label={`Открыть историю списаний ${user.name}`}>
-                      <FiClock aria-hidden="true" />
-                      <span>Открыть</span>
-                    </TableActionButton>
+                  <td data-label="Всего списаний" className={styles.money}>
+                    <div className={styles.chargeTotal}>
+                      <span>{formatMoney(user.total_charged)}</span>
+                      <TableActionButton
+                        className={styles.historyButton}
+                        title="История списаний"
+                        onClick={() => setHistoryUser(user)}
+                        aria-label={`Открыть историю списаний ${user.name}`}
+                      >
+                        <FiClock aria-hidden="true" />
+                      </TableActionButton>
+                    </div>
                   </td>
                   <td className={styles.rowActions}>
                     <button type="button" onClick={() => setEditing(user)} aria-label={`Редактировать ${user.name}`}><FiEdit3 /></button>
@@ -147,6 +172,9 @@ export function UsersPage() {
       <Modal open={Boolean(editing)} title="Настройки пользователя" onClose={() => setEditing(null)}>{editing && <UserForm user={editing} onCancel={() => setEditing(null)} onSubmit={saveEdit} />}</Modal>
       <Modal open={Boolean(resetting)} title="Сбросить пароль" onClose={() => setResetting(null)}>{resetting && <ResetPasswordForm name={resetting.name} onCancel={() => setResetting(null)} onSubmit={savePassword} />}</Modal>
       {historyUser && <ChargeHistoryModal user={historyUser} onClose={() => setHistoryUser(null)} />}
+      {statusHistoryUser && (
+        <StatusHistoryModal user={statusHistoryUser} onClose={() => setStatusHistoryUser(null)} />
+      )}
       <Modal open={Boolean(deleting)} title="Удалить пользователя" onClose={() => setDeleting(null)}>{deleting && <DeleteUserConfirmation name={deleting.name} onCancel={() => setDeleting(null)} onConfirm={confirmDelete} />}</Modal>
     </div>
   );

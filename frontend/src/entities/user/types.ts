@@ -1,6 +1,7 @@
 export type UserRole = 'admin' | 'user';
 export type AccountStatus = 'active' | 'paused' | 'blocked';
 export type VpnStatus = 'online' | 'offline' | 'unknown';
+export type StatusChangeSource = 'bootstrap' | 'admin' | 'billing' | 'top_up';
 
 export interface User {
   id: string;
@@ -26,8 +27,22 @@ export interface UserCharge {
   created_at: string;
 }
 
+export interface UserStatusHistory {
+  id: string;
+  previous_status: AccountStatus | null;
+  new_status: AccountStatus;
+  changed_by_user_id: string | null;
+  changed_by_name: string | null;
+  source: StatusChangeSource;
+  effective_at: string;
+}
+
 export interface DailyCharge {
   daily_charge: string | null;
+}
+
+export interface UserTopUpPayload {
+  amount: string;
 }
 
 export interface LoginPayload {

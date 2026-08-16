@@ -1,0 +1,29 @@
+.form {
+  display: grid;
+  gap: 18px;
+}
+
+.amountInput {
+  min-height: 58px;
+  font-family: var(--font-data);
+  font-size: 1.25rem;
+  font-weight: 650;
+  letter-spacing: -.035em;
+}
+
+.error {
+  margin: 0;
+  color: var(--danger);
+  font-size: .82rem;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+  margin-top: 2px;
+}
+
+@media (max-width: 440px) {
+  .actions { display: grid; grid-template-columns: 1fr 1fr; }
+}

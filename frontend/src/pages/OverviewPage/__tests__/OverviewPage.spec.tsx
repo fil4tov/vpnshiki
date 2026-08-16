@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { vi } from 'vitest';
 
 import { getMyVpnAccess } from '#entities/vpnAccess';
@@ -47,6 +47,7 @@ describe('OverviewPage', () => {
     const accountCard = screen.getByRole('region', { name: 'Статус участия и баланс' });
     expect(screen.getByText('Личный кабинет')).toBeInTheDocument();
     expect(screen.getByText('Привет, Миша')).toBeInTheDocument();
+    expect(within(accountCard).getByText('Аккаунт активен')).toBeInTheDocument();
     expect(within(accountCard).getByText(/10,00/)).toBeInTheDocument();
     expect(within(accountCard).getByText(/Лимит минуса:.*200,00/)).toBeInTheDocument();
     const dailyChargeLabel = await within(accountCard).findByText('Суточное списание');
@@ -54,6 +55,15 @@ describe('OverviewPage', () => {
     expect(dailyChargeLabel.closest('div')).toHaveAttribute('data-tone', 'active');
     expect(await within(accountCard).findByText(/50,00/)).toBeInTheDocument();
     expect(screen.queryByRole('switch', { name: 'Участие в программе' })).not.toBeInTheDocument();
+  });
+
+  it('opens balance top-up from the page heading', () => {
+    renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Пополнить' }));
+
+    expect(screen.getByRole('dialog', { name: 'Пополнить баланс' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Сумма пополнения, ₽')).toBeInTheDocument();
   });
 
   it('covers the whole daily charge pill with a skeleton while loading', () => {

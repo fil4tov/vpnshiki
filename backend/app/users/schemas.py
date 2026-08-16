@@ -57,12 +57,26 @@ class UserChargeRead(BaseModel):
         return f"{value:.2f}"
 
 
+class UserStatusHistoryRead(BaseModel):
+    id: UUID
+    previous_status: AccountStatus | None
+    new_status: AccountStatus
+    changed_by_user_id: UUID | None
+    changed_by_name: str | None
+    source: str
+    effective_at: datetime
+
+
 class DailyChargeRead(BaseModel):
     daily_charge: Decimal | None
 
     @field_serializer("daily_charge")
     def serialize_daily_charge(self, value: Decimal | None) -> str | None:
         return f"{value:.2f}" if value is not None else None
+
+
+class UserTopUpCreate(BaseModel):
+    amount: Annotated[Money, Field(gt=0)]
 
 
 class PasswordChange(BaseModel):

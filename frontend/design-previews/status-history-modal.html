@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>История статуса — варианты модалки</title>
+    <style>
+      @font-face {
+        font-family: 'Onest';
+        src: url('/node_modules/@fontsource-variable/onest/files/onest-cyrillic-wght-normal.woff2') format('woff2');
+        font-weight: 100 900;
+        font-display: swap;
+      }
+
+      @font-face {
+        font-family: 'JetBrains Mono';
+        src: url('/node_modules/@fontsource/jetbrains-mono/files/jetbrains-mono-cyrillic-400-normal.woff2') format('woff2');
+        font-weight: 400;
+        font-display: swap;
+      }
+
+      :root {
+        color-scheme: dark;
+        font-family: 'Onest', system-ui, sans-serif;
+        --canvas: #0b0811;
+        --surface: rgba(25, 19, 33, .82);
+        --surface-strong: #21182d;
+        --surface-muted: rgba(255, 255, 255, .04);
+        --text: #f7f3fb;
+        --text-muted: #a89faf;
+        --border: rgba(255, 255, 255, .09);
+        --border-strong: rgba(192, 100, 255, .34);
+        --accent: #8b5cf6;
+        --accent-bright: #c064ff;
+        --accent-soft: rgba(139, 92, 246, .16);
+        --positive: #35d6a1;
+        --positive-soft: rgba(53, 214, 161, .13);
+        --warning: #ffbf69;
+        --warning-soft: rgba(255, 191, 105, .13);
+        --danger: #ff6d8d;
+        --danger-soft: rgba(255, 109, 141, .14);
+        --font-data: 'JetBrains Mono', monospace;
+        --shadow: 0 30px 90px rgba(0, 0, 0, .52);
+        --focus: 0 0 0 3px rgba(192, 100, 255, .3);
+      }
+
+      :root[data-theme='light'] {
+        color-scheme: light;
+        --canvas: #f5f2f8;
+        --surface: rgba(255, 255, 255, .82);
+        --surface-strong: #fff;
+        --surface-muted: rgba(47, 31, 61, .05);
+        --text: #211727;
+        --text-muted: #726979;
+        --border: rgba(54, 35, 67, .11);
+        --border-strong: rgba(126, 70, 205, .3);
+        --accent: #7342da;
+        --accent-bright: #963fe3;
+        --accent-soft: rgba(115, 66, 218, .11);
+        --positive: #168c6b;
+        --positive-soft: rgba(22, 140, 107, .1);
+        --warning: #a9650d;
+        --warning-soft: rgba(169, 101, 13, .1);
+        --danger: #d64668;
+        --danger-soft: rgba(214, 70, 104, .1);
+        --shadow: 0 28px 80px rgba(45, 29, 57, .18);
+      }
+
+      * { box-sizing: border-box; }
+      body {
+        min-width: 320px;
+        min-height: 100vh;
+        margin: 0;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 70% -10%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 35rem),
+          var(--canvas);
+      }
+      button { font: inherit; }
+
+      .app-shell { min-height: 100vh; display: grid; grid-template-columns: 240px 1fr; }
+      .sidebar { padding: 28px 16px; border-right: 1px solid var(--border); background: color-mix(in srgb, var(--canvas) 86%, transparent); }
+      .brand { padding: 0 12px 28px; font-size: 18px; font-weight: 760; }
+      .brand span { color: var(--accent-bright); }
+      .nav { display: grid; gap: 7px; }
+      .nav div { padding: 12px 14px; color: var(--text-muted); border-radius: 12px; }
+      .nav .active { color: var(--text); background: var(--accent-soft); }
+      .workspace { padding: 38px clamp(24px, 5vw, 72px); opacity: .28; }
+      .workspace h1 { margin: 0 0 28px; font-size: 42px; letter-spacing: -.05em; }
+      .fake-table { overflow: hidden; border: 1px solid var(--border); border-radius: 17px; background: var(--surface); }
+      .fake-toolbar { height: 70px; border-bottom: 1px solid var(--border); }
+      .fake-row { display: grid; grid-template-columns: 1.6fr 1.25fr 1fr 1fr; align-items: center; gap: 20px; min-height: 68px; padding: 0 22px; border-bottom: 1px solid var(--border); }
+      .fake-line { height: 11px; border-radius: 99px; background: color-mix(in srgb, var(--text) 10%, transparent); }
+      .fake-status { display: flex; align-items: center; gap: 8px; }
+      .fake-badge { width: 74px; height: 24px; background: var(--positive-soft); border: 1px solid color-mix(in srgb, var(--positive) 25%, transparent); border-radius: 99px; }
+      .fake-clock { width: 32px; height: 32px; border: 1px solid var(--border); border-radius: 9px; }
+
+      .preview-bar {
+        position: fixed;
+        z-index: 120;
+        top: 16px;
+        left: 50%;
+        width: min(850px, calc(100vw - 28px));
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 9px 10px 9px 16px;
+        transform: translateX(-50%);
+        background: color-mix(in srgb, var(--surface-strong) 93%, transparent);
+        border: 1px solid var(--border-strong);
+        border-radius: 15px;
+        box-shadow: 0 16px 50px rgba(0, 0, 0, .28);
+        backdrop-filter: blur(20px);
+      }
+      .preview-copy { min-width: 0; flex: 1; }
+      .preview-copy strong { display: block; font-size: 13px; }
+      .preview-copy span { display: block; margin-top: 2px; overflow: hidden; color: var(--text-muted); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
+      .variant-tabs { display: flex; gap: 3px; padding: 3px; background: var(--surface-muted); border-radius: 11px; }
+      .variant-tabs button, .theme-toggle {
+        height: 34px;
+        padding: 0 11px;
+        color: var(--text-muted);
+        cursor: pointer;
+        background: transparent;
+        border: 0;
+        border-radius: 8px;
+      }
+      .variant-tabs button:hover, .theme-toggle:hover { color: var(--text); background: var(--surface-muted); }
+      .variant-tabs button[aria-selected='true'] { color: #fff; background: var(--accent); }
+      .variant-tabs button:focus-visible, .theme-toggle:focus-visible { outline: none; box-shadow: var(--focus); }
+      .theme-toggle { width: 36px; padding: 0; font-size: 17px; border: 1px solid var(--border); }
+
+      .backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        display: grid;
+        place-items: center;
+        padding: 82px 20px 20px;
+        background: rgba(5, 3, 8, .7);
+        backdrop-filter: blur(9px);
+      }
+      :root[data-theme='light'] .backdrop { background: rgba(39, 24, 49, .42); }
+      .modal {
+        width: min(100%, 720px);
+        max-height: calc(100vh - 106px);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        background: var(--surface-strong);
+        border: 1px solid var(--border-strong);
+        border-radius: 22px;
+        box-shadow: var(--shadow);
+      }
+      .modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding: 24px 24px 18px; }
+      .eyebrow { margin: 0 0 7px; color: var(--accent-bright); font-size: 11px; font-weight: 720; text-transform: uppercase; letter-spacing: .12em; }
+      .modal-header h2 { margin: 0; font-size: 25px; line-height: 1.12; letter-spacing: -.035em; }
+      .subtitle { display: flex; align-items: center; gap: 7px; margin: 8px 0 0; color: var(--text-muted); font-size: 13px; }
+      .subtitle i { width: 7px; height: 7px; background: var(--positive); border-radius: 50%; box-shadow: 0 0 10px color-mix(in srgb, var(--positive) 60%, transparent); }
+      .close { flex: 0 0 auto; width: 38px; height: 38px; display: grid; place-items: center; color: var(--text-muted); cursor: pointer; background: var(--surface-muted); border: 1px solid var(--border); border-radius: 11px; font-size: 23px; }
+      .close:hover { color: var(--text); background: var(--accent-soft); border-color: var(--border-strong); }
+      .close:focus-visible { outline: none; box-shadow: var(--focus); }
+      .modal-body { min-height: 0; overflow: auto; padding: 0 24px 24px; }
+      .variant { display: none; }
+      .variant.active { display: block; animation: reveal 180ms ease-out; }
+      @keyframes reveal { from { opacity: 0; transform: translateY(4px); } }
+
+      .status { display: inline-flex; min-height: 25px; align-items: center; gap: 6px; padding: 0 9px; font-size: 11px; font-weight: 680; border: 1px solid transparent; border-radius: 99px; white-space: nowrap; }
+      .status.active { color: var(--positive); background: var(--positive-soft); border-color: color-mix(in srgb, var(--positive) 25%, transparent); }
+      .status.paused { color: var(--warning); background: var(--warning-soft); border-color: color-mix(in srgb, var(--warning) 25%, transparent); }
+      .status.blocked { color: var(--danger); background: var(--danger-soft); border-color: color-mix(in srgb, var(--danger) 25%, transparent); }
+      .arrow { color: var(--text-muted); font-family: var(--font-data); font-size: 11px; }
+      .variant-note { margin: 16px 2px 0; padding-top: 14px; color: var(--text-muted); font-size: 11px; line-height: 1.5; border-top: 1px solid var(--border); }
+      .variant-note strong { color: var(--text); }
+
+      /* A — event timeline */
+      .current-strip { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 15px; padding: 14px 16px; background: var(--positive-soft); border: 1px solid color-mix(in srgb, var(--positive) 22%, transparent); border-radius: 14px; }
+      .current-copy span { display: block; margin-bottom: 4px; color: var(--text-muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+      .current-copy strong { font-size: 14px; }
+      .current-duration { color: var(--positive); font-family: var(--font-data); font-size: 12px; }
+      .timeline { position: relative; display: grid; }
+      .timeline::before { position: absolute; top: 20px; bottom: 20px; left: 85px; width: 1px; content: ''; background: linear-gradient(var(--positive), var(--accent), color-mix(in srgb, var(--text-muted) 16%, transparent)); }
+      .event { position: relative; display: grid; grid-template-columns: 69px 15px 1fr; gap: 10px; min-height: 91px; }
+      .event-time { padding-top: 4px; text-align: right; }
+      .event-time strong { display: block; font-family: var(--font-data); font-size: 11px; font-weight: 400; }
+      .event-time span { color: var(--text-muted); font-size: 10px; }
+      .event-dot { position: relative; z-index: 1; width: 10px; height: 10px; margin-top: 8px; justify-self: center; background: var(--surface-strong); border: 2px solid var(--accent-bright); border-radius: 50%; box-shadow: 0 0 0 4px var(--surface-strong); }
+      .event:first-child .event-dot { border-color: var(--positive); }
+      .event-card { min-width: 0; padding: 0 0 19px 3px; }
+      .transition { display: flex; align-items: center; gap: 7px; margin-bottom: 8px; }
+      .event-reason { margin: 0 0 5px; font-size: 12px; font-weight: 640; }
+      .event-meta { color: var(--text-muted); font-size: 11px; line-height: 1.45; }
+      .source { display: inline-flex; margin-left: 5px; padding: 2px 6px; color: var(--accent-bright); background: var(--accent-soft); border-radius: 5px; font-family: var(--font-data); font-size: 9px; }
+
+      /* B — audit ledger */
+      .filters { display: flex; gap: 5px; margin-bottom: 12px; }
+      .filters button { min-height: 31px; padding: 0 10px; color: var(--text-muted); cursor: pointer; background: var(--surface-muted); border: 1px solid var(--border); border-radius: 9px; font-size: 10px; }
+      .filters button.active { color: var(--text); background: var(--accent-soft); border-color: var(--border-strong); }
+      .audit { overflow: hidden; border: 1px solid var(--border); border-radius: 14px; }
+      .audit-head, .audit-row { display: grid; grid-template-columns: 116px 1.15fr 1.4fr 110px; align-items: center; gap: 12px; }
+      .audit-head { padding: 10px 14px; color: var(--text-muted); font-size: 9px; font-weight: 650; text-transform: uppercase; letter-spacing: .08em; background: var(--surface-muted); }
+      .audit-row { min-height: 63px; padding: 11px 14px; border-top: 1px solid var(--border); }
+      .audit-row:hover { background: var(--surface-muted); }
+      .audit-date strong { display: block; font-family: var(--font-data); font-size: 10px; font-weight: 400; }
+      .audit-date span, .audit-cause span, .audit-author span { color: var(--text-muted); font-size: 10px; }
+      .audit-transition { display: flex; align-items: center; gap: 5px; }
+      .audit-cause strong, .audit-author strong { display: block; margin-bottom: 3px; font-size: 11px; font-weight: 620; }
+      .audit-row[hidden] { display: none; }
+
+      /* C — status periods */
+      .period-summary { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-bottom: 16px; }
+      .period-stat { padding: 13px; background: var(--surface-muted); border: 1px solid var(--border); border-radius: 12px; }
+      .period-stat span { display: block; margin-bottom: 5px; color: var(--text-muted); font-size: 10px; }
+      .period-stat strong { font-family: var(--font-data); font-size: 15px; font-weight: 400; }
+      .period-stat.active strong { color: var(--positive); }
+      .period-stat.paused strong { color: var(--warning); }
+      .period-stat.blocked strong { color: var(--danger); }
+      .periods { display: grid; gap: 9px; }
+      .period-card { position: relative; overflow: hidden; display: grid; grid-template-columns: 125px 1fr auto; align-items: center; gap: 16px; min-height: 76px; padding: 13px 15px 13px 19px; background: color-mix(in srgb, var(--surface-muted) 60%, transparent); border: 1px solid var(--border); border-radius: 14px; }
+      .period-card::before { position: absolute; inset: 0 auto 0 0; width: 4px; content: ''; background: var(--period-color); }
+      .period-card.active { --period-color: var(--positive); }
+      .period-card.paused { --period-color: var(--warning); }
+      .period-card.blocked { --period-color: var(--danger); }
+      .period-dates strong { display: block; font-family: var(--font-data); font-size: 10px; font-weight: 400; }
+      .period-dates span { color: var(--text-muted); font-size: 10px; }
+      .period-copy strong { display: block; margin-bottom: 4px; font-size: 12px; }
+      .period-copy span { color: var(--text-muted); font-size: 10px; line-height: 1.4; }
+      .period-length { color: var(--period-color); font-family: var(--font-data); font-size: 11px; white-space: nowrap; }
+
+      @media (max-width: 680px) {
+        .app-shell { display: block; }
+        .sidebar { display: none; }
+        .workspace { padding: 28px 18px; }
+        .preview-bar { align-items: stretch; flex-wrap: wrap; padding: 10px; }
+        .preview-copy { flex-basis: calc(100% - 50px); padding-inline: 4px; }
+        .variant-tabs { width: 100%; order: 3; }
+        .variant-tabs button { flex: 1; }
+        .backdrop { padding: 126px 9px 9px; place-items: end center; }
+        .modal { max-height: calc(100vh - 135px); border-radius: 19px; }
+        .modal-header { padding: 19px 17px 16px; }
+        .modal-body { padding: 0 17px 18px; }
+        .timeline::before { left: 67px; }
+        .event { grid-template-columns: 51px 13px 1fr; }
+        .event-time strong { font-size: 10px; }
+        .audit-head { display: none; }
+        .audit-row { grid-template-columns: 92px 1fr; gap: 7px 12px; }
+        .audit-cause, .audit-author { grid-column: 2; }
+        .audit-transition { align-self: start; }
+        .period-summary { grid-template-columns: 1fr; }
+        .period-card { grid-template-columns: 92px 1fr; gap: 8px 12px; }
+        .period-length { grid-column: 2; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell" aria-hidden="true">
+      <aside class="sidebar">
+        <div class="brand">VPN<span>щики</span></div>
+        <div class="nav"><div class="active">Пользователи</div><div>Тарифные планы</div></div>
+      </aside>
+      <main class="workspace">
+        <h1>Пользователи</h1>
+        <div class="fake-table">
+          <div class="fake-toolbar"></div>
+          <div class="fake-row"><i class="fake-line"></i><div class="fake-status"><i class="fake-badge"></i><i class="fake-clock"></i></div><i class="fake-line"></i><i class="fake-line"></i></div>
+          <div class="fake-row"><i class="fake-line"></i><div class="fake-status"><i class="fake-badge"></i><i class="fake-clock"></i></div><i class="fake-line"></i><i class="fake-line"></i></div>
+          <div class="fake-row"><i class="fake-line"></i><div class="fake-status"><i class="fake-badge"></i><i class="fake-clock"></i></div><i class="fake-line"></i><i class="fake-line"></i></div>
+        </div>
+      </main>
+    </div>
+
+    <section class="preview-bar" aria-label="Управление превью">
+      <div class="preview-copy">
+        <strong id="variant-title">Вариант A · Хронология переходов</strong>
+        <span id="variant-description">События, причины и участники складываются в понятную историю</span>
+      </div>
+      <button class="theme-toggle" type="button" aria-label="Переключить тему" title="Переключить тему">☼</button>
+      <div class="variant-tabs" role="tablist" aria-label="Варианты истории статуса">
+        <button type="button" role="tab" aria-selected="true" data-variant="a">A</button>
+        <button type="button" role="tab" aria-selected="false" data-variant="b">B</button>
+        <button type="button" role="tab" aria-selected="false" data-variant="c">C</button>
+      </div>
+    </section>
+
+    <div class="backdrop">
+      <section class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+        <header class="modal-header">
+          <div>
+            <p class="eyebrow">Марина</p>
+            <h2 id="modal-title">История статуса</h2>
+            <p class="subtitle"><i aria-hidden="true"></i>Сейчас аккаунт активен</p>
+          </div>
+          <button class="close" type="button" aria-label="Закрыть">×</button>
+        </header>
+
+        <div class="modal-body">
+          <div class="variant active" data-panel="a" role="tabpanel">
+            <div class="current-strip">
+              <div class="current-copy"><span>Текущий период</span><strong>Аккаунт работает без ограничений</strong></div>
+              <div class="current-duration">4 дня</div>
+            </div>
+            <div class="timeline">
+              <article class="event">
+                <time class="event-time"><strong>16.08 · 14:32</strong><span>4 дня назад</span></time><i class="event-dot"></i>
+                <div class="event-card"><div class="transition"><span class="status blocked">Заблокирован</span><span class="arrow">→</span><span class="status active">Активен</span></div><p class="event-reason">Баланс снова в допустимых пределах</p><div class="event-meta">Автоматически после пополнения на 500,00 ₽ <span class="source">пополнение</span></div></div>
+              </article>
+              <article class="event">
+                <time class="event-time"><strong>12.08 · 00:00</strong><span>8 дней назад</span></time><i class="event-dot"></i>
+                <div class="event-card"><div class="transition"><span class="status active">Активен</span><span class="arrow">→</span><span class="status blocked">Заблокирован</span></div><p class="event-reason">Превышен допустимый минус</p><div class="event-meta">Ежедневное списание опустило баланс до −532,26 ₽ <span class="source">биллинг</span></div></div>
+              </article>
+              <article class="event">
+                <time class="event-time"><strong>07.08 · 10:18</strong><span>13 дней назад</span></time><i class="event-dot"></i>
+                <div class="event-card"><div class="transition"><span class="status paused">Приостановлен</span><span class="arrow">→</span><span class="status active">Активен</span></div><p class="event-reason">Участие возобновлено администратором</p><div class="event-meta">Изменил admin <span class="source">админ</span></div></div>
+              </article>
+              <article class="event">
+                <time class="event-time"><strong>05.08 · 18:04</strong><span>15 дней назад</span></time><i class="event-dot"></i>
+                <div class="event-card"><div class="transition"><span class="status active">Активен</span><span class="arrow">→</span><span class="status paused">Приостановлен</span></div><p class="event-reason">Участие приостановлено вручную</p><div class="event-meta">Изменил admin <span class="source">админ</span></div></div>
+              </article>
+            </div>
+            <p class="variant-note"><strong>Лучше всего для объяснения:</strong> видна причинно-следственная связь каждого перехода. Занимает больше вертикального места.</p>
+          </div>
+
+          <div class="variant" data-panel="b" role="tabpanel">
+            <div class="filters" aria-label="Фильтр событий">
+              <button class="active" type="button" data-filter="all">Все · 6</button>
+              <button type="button" data-filter="auto">Автоматически · 3</button>
+              <button type="button" data-filter="admin">Админ · 3</button>
+            </div>
+            <div class="audit">
+              <div class="audit-head"><span>Дата</span><span>Переход</span><span>Причина</span><span>Кто изменил</span></div>
+              <div class="audit-row" data-source="auto"><div class="audit-date"><strong>16.08.2026</strong><span>14:32</span></div><div class="audit-transition"><span class="status blocked">Заблок.</span><span class="arrow">→</span><span class="status active">Активен</span></div><div class="audit-cause"><strong>Баланс восстановлен</strong><span>Пополнение 500,00 ₽</span></div><div class="audit-author"><strong>Система</strong><span>пополнение</span></div></div>
+              <div class="audit-row" data-source="auto"><div class="audit-date"><strong>12.08.2026</strong><span>00:00</span></div><div class="audit-transition"><span class="status active">Активен</span><span class="arrow">→</span><span class="status blocked">Заблок.</span></div><div class="audit-cause"><strong>Превышен лимит</strong><span>Баланс −532,26 ₽</span></div><div class="audit-author"><strong>Система</strong><span>биллинг</span></div></div>
+              <div class="audit-row" data-source="admin"><div class="audit-date"><strong>07.08.2026</strong><span>10:18</span></div><div class="audit-transition"><span class="status paused">Пауза</span><span class="arrow">→</span><span class="status active">Активен</span></div><div class="audit-cause"><strong>Участие возобновлено</strong><span>Ручное изменение</span></div><div class="audit-author"><strong>admin</strong><span>администратор</span></div></div>
+              <div class="audit-row" data-source="admin"><div class="audit-date"><strong>05.08.2026</strong><span>18:04</span></div><div class="audit-transition"><span class="status active">Активен</span><span class="arrow">→</span><span class="status paused">Пауза</span></div><div class="audit-cause"><strong>Участие приостановлено</strong><span>Ручное изменение</span></div><div class="audit-author"><strong>admin</strong><span>администратор</span></div></div>
+              <div class="audit-row" data-source="admin"><div class="audit-date"><strong>01.08.2026</strong><span>09:10</span></div><div class="audit-transition"><span class="status blocked">Заблок.</span><span class="arrow">→</span><span class="status active">Активен</span></div><div class="audit-cause"><strong>Аккаунт подключён</strong><span>Первичная настройка</span></div><div class="audit-author"><strong>admin</strong><span>администратор</span></div></div>
+              <div class="audit-row" data-source="auto"><div class="audit-date"><strong>01.08.2026</strong><span>09:09</span></div><div class="audit-transition"><span class="status blocked">Создан</span><span class="arrow">→</span><span class="status blocked">Заблок.</span></div><div class="audit-cause"><strong>Начальное состояние</strong><span>VPN ещё не включён</span></div><div class="audit-author"><strong>Система</strong><span>создание</span></div></div>
+            </div>
+            <p class="variant-note"><strong>Лучше всего для администрирования:</strong> самая высокая плотность и быстрый поиск по источнику. Причины воспринимаются суше.</p>
+          </div>
+
+          <div class="variant" data-panel="c" role="tabpanel">
+            <div class="period-summary">
+              <div class="period-stat active"><span>Активен</span><strong>15 дн.</strong></div>
+              <div class="period-stat paused"><span>Приостановлен</span><strong>2 дн.</strong></div>
+              <div class="period-stat blocked"><span>Заблокирован</span><strong>4 дн.</strong></div>
+            </div>
+            <div class="periods">
+              <article class="period-card active"><div class="period-dates"><strong>16.08 — сейчас</strong><span>текущий период</span></div><div class="period-copy"><strong>Аккаунт активен</strong><span>Восстановлен автоматически после пополнения баланса</span></div><div class="period-length">4 дня</div></article>
+              <article class="period-card blocked"><div class="period-dates"><strong>12.08 — 16.08</strong><span>4 дня</span></div><div class="period-copy"><strong>Финансовая блокировка</strong><span>Баланс был ниже допустимого минуса</span></div><div class="period-length">4 дня</div></article>
+              <article class="period-card active"><div class="period-dates"><strong>07.08 — 12.08</strong><span>5 дней</span></div><div class="period-copy"><strong>Аккаунт активен</strong><span>Участие возобновил администратор admin</span></div><div class="period-length">5 дней</div></article>
+              <article class="period-card paused"><div class="period-dates"><strong>05.08 — 07.08</strong><span>2 дня</span></div><div class="period-copy"><strong>Участие приостановлено</strong><span>Ручное решение администратора</span></div><div class="period-length">2 дня</div></article>
+              <article class="period-card active"><div class="period-dates"><strong>01.08 — 05.08</strong><span>4 дня</span></div><div class="period-copy"><strong>Первый активный период</strong><span>Аккаунт подключён к программе</span></div><div class="period-length">4 дня</div></article>
+            </div>
+            <p class="variant-note"><strong>Лучше всего для общей картины:</strong> сразу видно длительность состояний и долю простоя. Детали отдельных действий менее заметны.</p>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      const variants = {
+        a: ['Вариант A · Хронология переходов', 'События, причины и участники складываются в понятную историю'],
+        b: ['Вариант B · Аудит-таблица', 'Плотный журнал для быстрой сверки и фильтрации'],
+        c: ['Вариант C · Периоды статуса', 'Фокус на длительности активности, пауз и блокировок'],
+      };
+      const tabs = [...document.querySelectorAll('[data-variant]')];
+      const panels = [...document.querySelectorAll('[data-panel]')];
+      const title = document.querySelector('#variant-title');
+      const description = document.querySelector('#variant-description');
+
+      function showVariant(key) {
+        tabs.forEach((tab) => tab.setAttribute('aria-selected', String(tab.dataset.variant === key)));
+        panels.forEach((panel) => panel.classList.toggle('active', panel.dataset.panel === key));
+        title.textContent = variants[key][0];
+        description.textContent = variants[key][1];
+        history.replaceState(null, '', `#${key}`);
+      }
+
+      tabs.forEach((tab) => tab.addEventListener('click', () => showVariant(tab.dataset.variant)));
+      document.querySelector('.theme-toggle').addEventListener('click', () => {
+        const light = document.documentElement.dataset.theme === 'light';
+        document.documentElement.dataset.theme = light ? 'dark' : 'light';
+      });
+      document.querySelectorAll('[data-filter]').forEach((button) => {
+        button.addEventListener('click', () => {
+          const filter = button.dataset.filter;
+          document.querySelectorAll('[data-filter]').forEach((item) => item.classList.toggle('active', item === button));
+          document.querySelectorAll('.audit-row').forEach((row) => {
+            row.hidden = filter !== 'all' && row.dataset.source !== filter;
+          });
+        });
+      });
+      const initialVariant = location.hash.slice(1);
+      if (variants[initialVariant]) showVariant(initialVariant);
+    </script>
+  </body>
+</html>

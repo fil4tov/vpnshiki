@@ -4,12 +4,18 @@ from uuid import UUID
 from fastapi import APIRouter, status
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import aliased
 
 from app.auth.dependencies import CurrentAdmin, Database
 from app.auth.models import AuthSession
 from app.auth.security import hash_password
-from app.billing.models import StatusChangeSource, UserDailyCharge
-from app.billing.service import add_initial_status_history, profile_email, record_status_change
+from app.billing.models import StatusChangeSource, UserDailyCharge, UserStatusHistory
+from app.billing.service import (
+    add_initial_status_history,
+    profile_email,
+    reactivate_if_billing_blocked,
+    record_status_change,
+)
 from app.errors import ApiError
 from app.tariff_plans.models import TariffPlan
 from app.users.models import AccountStatus, User, UserRole
@@ -20,6 +26,7 @@ from app.users.schemas import (
     AdminUserUpdate,
     UserChargeRead,
     UserRead,
+    UserStatusHistoryRead,
     VpnStatus,
 )
 from app.vpn_access.dependencies import XuiProvider
@@ -27,8 +34,16 @@ from app.vpn_access.dependencies import XuiProvider
 router = APIRouter(prefix="/api/admin/users", tags=["admin"])
 
 
-async def _get_user(db: Database, user_id: UUID) -> User:
-    user = await db.get(User, user_id)
+async def _get_user(db: Database, user_id: UUID, *, for_update: bool = False) -> User:
+    if for_update:
+        user = await db.scalar(
+            select(User)
+            .where(User.id == user_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+    else:
+        user = await db.get(User, user_id)
     if user is None or user.deleted_at is not None:
         raise ApiError(status_code=404, code="user_not_found", message="Пользователь не найден")
     return user
@@ -125,6 +140,39 @@ async def list_user_charges(
     ]
 
 
+@router.get("/{user_id}/status-history", response_model=list[UserStatusHistoryRead])
+async def list_user_status_history(
+    user_id: UUID,
+    _admin: CurrentAdmin,
+    db: Database,
+) -> list[UserStatusHistoryRead]:
+    await _get_user(db, user_id)
+    changed_by = aliased(User)
+    rows = (
+        await db.execute(
+            select(UserStatusHistory, changed_by.name)
+            .outerjoin(changed_by, changed_by.id == UserStatusHistory.changed_by_user_id)
+            .where(UserStatusHistory.user_id == user_id)
+            .order_by(
+                UserStatusHistory.effective_at.desc(),
+                UserStatusHistory.created_at.desc(),
+            )
+        )
+    ).all()
+    return [
+        UserStatusHistoryRead(
+            id=history.id,
+            previous_status=history.previous_status,
+            new_status=history.new_status,
+            changed_by_user_id=history.changed_by_user_id,
+            changed_by_name=changed_by_name,
+            source=history.source,
+            effective_at=history.effective_at,
+        )
+        for history, changed_by_name in rows
+    ]
+
+
 @router.post("", response_model=UserRead, status_code=status.HTTP_201_CREATED)
 async def create_user(
     payload: AdminUserCreate, admin: CurrentAdmin, db: Database
@@ -161,7 +209,7 @@ async def update_user(
     db: Database,
     provider: XuiProvider,
 ) -> UserRead:
-    user = await _get_user(db, user_id)
+    user = await _get_user(db, user_id, for_update=True)
     changes = payload.model_dump(exclude_unset=True)
     target_role = changes.get("role")
     if user.role == UserRole.ADMIN.value and target_role == UserRole.USER:
@@ -189,8 +237,19 @@ async def update_user(
             source=StatusChangeSource.ADMIN,
             changed_by_user_id=admin.id,
         )
+    financial_terms_changed = False
     for field, value in changes.items():
-        setattr(user, field, value.value if isinstance(value, (AccountStatus, UserRole)) else value)
+        normalized = value.value if isinstance(value, (AccountStatus, UserRole)) else value
+        if field in {"balance", "negative_balance_limit"} and getattr(user, field) != normalized:
+            financial_terms_changed = True
+        setattr(user, field, normalized)
+    if financial_terms_changed:
+        await reactivate_if_billing_blocked(
+            db,
+            user,
+            source=StatusChangeSource.ADMIN,
+            changed_by_user_id=admin.id,
+        )
     await _commit_unique(db)
     await db.refresh(user)
     return UserRead.model_validate(user)

@@ -32,6 +32,27 @@ class StatusChangeSource(StrEnum):
     BOOTSTRAP = "bootstrap"
     ADMIN = "admin"
     BILLING = "billing"
+    TOP_UP = "top_up"
+
+
+class UserTopUp(Base):
+    __tablename__ = "user_top_ups"
+
+    id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
+    user_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    amount: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
+    balance_before: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
+    balance_after: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
+    )
+
+    __table_args__ = (
+        CheckConstraint("amount > 0", name="ck_user_top_ups_amount_positive"),
+        Index("ix_user_top_ups_user_created", "user_id", "created_at"),
+    )
 
 
 class UserDailyCharge(Base):
@@ -83,7 +104,7 @@ class UserStatusHistory(Base):
             name="ck_user_status_history_new",
         ),
         CheckConstraint(
-            "source IN ('bootstrap', 'admin', 'billing')",
+            "source IN ('bootstrap', 'admin', 'billing', 'top_up')",
             name="ck_user_status_history_source",
         ),
         Index(

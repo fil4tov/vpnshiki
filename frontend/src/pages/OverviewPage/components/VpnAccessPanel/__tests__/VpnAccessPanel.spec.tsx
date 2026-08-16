@@ -91,6 +91,8 @@ describe('VpnAccessPanel', () => {
   it.each(['paused', 'blocked'] as const)('does not request secrets for a %s account', (status) => {
     renderPanel(status);
     expect(screen.getByText('VPN доступен только для активного аккаунта')).toBeInTheDocument();
+    expect(screen.queryByText('Обратитесь к администратору после пополнения баланса.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Администратор может возобновить участие в настройках аккаунта.')).not.toBeInTheDocument();
     expect(getMyVpnAccess).not.toHaveBeenCalled();
   });
 

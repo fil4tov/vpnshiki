@@ -75,6 +75,13 @@ test('administrator manages a user account until deletion', async ({ page }) => 
   await expect(page.getByRole('heading', { name: `Привет, ${memberName}` })).toBeVisible();
   await expect(page.getByRole('switch', { name: 'Участие в программе' })).toHaveCount(0);
 
+  await page.getByRole('button', { name: 'Пополнить' }).click();
+  const topUpDialog = page.getByRole('dialog', { name: 'Пополнить баланс' });
+  await topUpDialog.getByLabel('Сумма пополнения, ₽').fill('25.50');
+  await topUpDialog.getByRole('button', { name: 'Пополнить' }).click();
+  await expect(topUpDialog).toBeHidden();
+  await expect(page.getByRole('region', { name: 'Статус участия и баланс' })).toContainText(/25[\s\u00a0]*,50/);
+
   await page.getByRole('button', { name: 'Открыть меню пользователя' }).click();
   await page.getByRole('menuitem', { name: 'Сменить пароль' }).click();
   const passwordDialog = page.getByRole('dialog', { name: 'Изменить пароль' });
@@ -97,6 +104,15 @@ test('administrator manages a user account until deletion', async ({ page }) => 
   await expect(editDialog).toBeHidden();
   const memberRow = page.locator('tbody tr').filter({ hasText: memberName });
   await expect(memberRow.getByText('Заблокирован', { exact: true })).toBeVisible();
+
+  await memberRow.getByRole('button', { name: `Открыть историю статуса ${memberName}` }).click();
+  const statusHistoryDialog = page.getByRole('dialog', { name: 'История статуса' });
+  const manualBlockEvent = statusHistoryDialog.getByRole('article').filter({
+    hasText: 'Аккаунт заблокирован вручную',
+  });
+  await expect(manualBlockEvent).toBeVisible();
+  await expect(manualBlockEvent.getByText(`Изменил ${adminName}`)).toBeVisible();
+  await statusHistoryDialog.getByRole('button', { name: 'Закрыть' }).click();
 
   await logout();
   await page.getByLabel('Имя').fill(memberName);

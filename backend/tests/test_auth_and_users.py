@@ -143,6 +143,38 @@ async def test_admin_creates_and_updates_user(
     ]
 
 
+async def test_admin_reads_user_status_history_with_actor(
+    client: AsyncClient,
+) -> None:
+    provider = FakeStatusXuiClient()
+    app.dependency_overrides[get_xui_client] = lambda: provider
+    await login(client)
+    created = await client.post(
+        "/api/admin/users",
+        json={"name": "История статуса", "password": "user-password"},
+    )
+    user_id = created.json()["id"]
+    updated = await client.patch(
+        f"/api/admin/users/{user_id}",
+        json={"account_status": "paused"},
+    )
+    assert updated.status_code == 200
+
+    response = await client.get(f"/api/admin/users/{user_id}/status-history")
+
+    assert response.status_code == 200
+    history = response.json()
+    assert [item["new_status"] for item in history] == ["paused", "active"]
+    assert [item["previous_status"] for item in history] == ["active", None]
+    assert [item["source"] for item in history] == ["admin", "admin"]
+    assert [item["changed_by_name"] for item in history] == ["admin", "admin"]
+
+    await client.post("/api/auth/logout")
+    await login(client, "История статуса", "user-password")
+    forbidden = await client.get(f"/api/admin/users/{user_id}/status-history")
+    assert forbidden.status_code == 403
+
+
 async def test_names_are_unique_case_insensitively(client: AsyncClient) -> None:
     await login(client)
     response = await client.post(

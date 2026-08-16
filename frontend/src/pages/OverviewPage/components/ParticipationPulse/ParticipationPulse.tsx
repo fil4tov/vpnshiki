@@ -16,7 +16,7 @@ export function ParticipationPulse({ accountStatus, balance, negativeBalanceLimi
   const active = accountStatus === 'active';
   const blocked = accountStatus === 'blocked';
   const status = blocked ? 'Заблокирован' : active ? 'Активен' : 'Приостановлен';
-  const title = blocked ? 'Аккаунт заблокирован' : active ? 'Вы участвуете' : 'Аккаунт приостановлен';
+  const title = blocked ? 'Аккаунт заблокирован' : active ? 'Аккаунт активен' : 'Аккаунт приостановлен';
   const description = blocked
     ? 'Статус сможет изменить администратор после пополнения баланса.'
     : active

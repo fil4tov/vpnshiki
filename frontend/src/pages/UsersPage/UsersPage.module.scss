@@ -32,6 +32,9 @@ tbody tr:hover { background: var(--surface-muted); }
 .person strong { font-size: .84rem; }
 .person small { color: var(--text-muted); font-size: .68rem; }
 .money { font-family: var(--font-data); font-size: .78rem; white-space: nowrap; }
+.statusValue,
+.chargeTotal { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 8px; }
+.historyButton { width: 34px; min-width: 34px; justify-content: center; padding: 0; }
 .vpnStatus { white-space: nowrap; }
 .negativeMoney { color: var(--danger); }
 .rowActions { display: flex; justify-content: flex-end; gap: 6px; }

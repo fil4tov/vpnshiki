@@ -52,10 +52,23 @@ describe('UsersPage', () => {
 
     expect(await screen.findByText('online-user')).toBeInTheDocument();
     const header = screen.getAllByRole('row')[0];
-    expect(within(header).getAllByRole('columnheader').slice(0, 3).map((cell) => cell.textContent))
-      .toEqual(['Пользователь', 'Статус', 'VPN']);
-    expect(within(screen.getByText('online-user').closest('tr')!).getByText('В сети'))
+    const headers = within(header).getAllByRole('columnheader').map((cell) => cell.textContent);
+    expect(headers.slice(0, 3)).toEqual(['Пользователь', 'Статус', 'VPN']);
+    expect(headers).not.toContain('История списаний');
+    const onlineRow = within(screen.getByText('online-user').closest('tr')!);
+    expect(onlineRow.getByText('В сети'))
       .toBeInTheDocument();
+    const historyButton = onlineRow.getByRole('button', {
+      name: 'Открыть историю списаний online-user',
+    });
+    expect(historyButton).toHaveTextContent('');
+    expect(historyButton.closest('td')).toHaveAttribute('data-label', 'Всего списаний');
+    const statusHistoryButton = onlineRow.getByRole('button', {
+      name: 'Открыть историю статуса online-user',
+    });
+    expect(statusHistoryButton).toHaveTextContent('');
+    expect(statusHistoryButton.closest('td')).toHaveAttribute('data-label', 'Статус');
+    expect(screen.queryByText('Открыть')).not.toBeInTheDocument();
     expect(within(screen.getByText('offline-user').closest('tr')!).getByText('Не в сети'))
       .toBeInTheDocument();
     expect(within(screen.getByText('unknown-user').closest('tr')!).getByText('Неизвестно'))
