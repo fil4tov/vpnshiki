@@ -1,7 +1,7 @@
 export type UserRole = 'admin' | 'user';
 export type AccountStatus = 'active' | 'paused' | 'blocked';
 export type VpnStatus = 'online' | 'offline' | 'unknown';
-export type StatusChangeSource = 'bootstrap' | 'admin' | 'billing' | 'top_up';
+export type StatusChangeSource = 'bootstrap' | 'admin' | 'billing' | 'top_up' | 'user';
 
 export interface User {
   id: string;

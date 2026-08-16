@@ -60,6 +60,8 @@ test('administrator manages a user account until deletion', async ({ page }) => 
   await createDialog.getByLabel('Имя').fill(memberName);
   await createDialog.getByLabel('Начальный пароль').fill(initialPassword);
   await createDialog.getByLabel('Допустимый минус, ₽').fill('500');
+  await createDialog.getByRole('combobox', { name: 'Статус аккаунта' }).click();
+  await page.getByRole('option', { name: 'Приостановлен' }).click();
   await createDialog.getByRole('button', { name: 'Создать пользователя' }).click();
   await expect(page.getByText(memberName)).toBeVisible();
 
@@ -73,7 +75,12 @@ test('administrator manages a user account until deletion', async ({ page }) => 
   await page.getByLabel('Пароль', { exact: true }).fill(initialPassword);
   await page.getByRole('button', { name: 'Войти' }).click();
   await expect(page.getByRole('heading', { name: `Привет, ${memberName}` })).toBeVisible();
-  await expect(page.getByRole('switch', { name: 'Участие в программе' })).toHaveCount(0);
+  const accountCard = page.getByRole('region', { name: 'Статус участия и баланс' });
+  await expect(accountCard).toContainText('Аккаунт приостановлен');
+  await expect(accountCard.getByText('Суточное списание')).toHaveCount(0);
+  await accountCard.getByRole('switch', { name: 'Активировать аккаунт' }).click();
+  await expect(accountCard).toContainText('Аккаунт активен');
+  await expect(accountCard.getByText('Суточное списание')).toBeVisible();
 
   await page.getByRole('button', { name: 'Пополнить' }).click();
   const topUpDialog = page.getByRole('dialog', { name: 'Пополнить баланс' });
@@ -112,6 +119,8 @@ test('administrator manages a user account until deletion', async ({ page }) => 
   });
   await expect(manualBlockEvent).toBeVisible();
   await expect(manualBlockEvent.getByText(`Изменил ${adminName}`)).toBeVisible();
+  await expect(statusHistoryDialog.getByText('Аккаунт активирован пользователем')).toBeVisible();
+  await expect(statusHistoryDialog.getByText(`Активировал ${memberName}`)).toBeVisible();
   await statusHistoryDialog.getByRole('button', { name: 'Закрыть' }).click();
 
   await logout();
@@ -120,7 +129,7 @@ test('administrator manages a user account until deletion', async ({ page }) => 
   await page.getByRole('button', { name: 'Войти' }).click();
   await expect(page.getByText('Аккаунт заблокирован')).toBeVisible();
   await expect(page.getByText('VPN доступен только для активного аккаунта')).toBeVisible();
-  await expect(page.getByRole('switch', { name: 'Участие в программе' })).toHaveCount(0);
+  await expect(page.getByRole('switch', { name: 'Активировать аккаунт' })).toHaveCount(0);
   expect(blockedVpnRequests).toBe(0);
   page.off('request', countBlockedVpnRequests);
 

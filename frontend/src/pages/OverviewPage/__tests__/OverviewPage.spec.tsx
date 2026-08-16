@@ -1,9 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 
 import { getMyVpnAccess } from '#entities/vpnAccess';
-import { getMyDailyCharge, useUserStore } from '#entities/user';
+import { activateMyAccount, getMyDailyCharge, useUserStore } from '#entities/user';
+import { ApiError } from '#shared/api';
 
 import { OverviewPage } from '../OverviewPage';
 
@@ -15,7 +17,7 @@ const user = {
 
 vi.mock('#entities/user', async () => {
   const actual = await vi.importActual<typeof import('#entities/user')>('#entities/user');
-  return { ...actual, getMyDailyCharge: vi.fn() };
+  return { ...actual, activateMyAccount: vi.fn(), getMyDailyCharge: vi.fn() };
 });
 
 vi.mock('#entities/vpnAccess', async () => {
@@ -34,6 +36,7 @@ function renderPage() {
 
 describe('OverviewPage', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     useUserStore.setState({ user, status: 'authenticated' });
     vi.mocked(getMyDailyCharge).mockResolvedValue({ daily_charge: '50.00' });
     vi.mocked(getMyVpnAccess).mockResolvedValue({
@@ -54,7 +57,7 @@ describe('OverviewPage', () => {
     expect(dailyChargeLabel).toBeInTheDocument();
     expect(dailyChargeLabel.closest('div')).toHaveAttribute('data-tone', 'active');
     expect(await within(accountCard).findByText(/50,00/)).toBeInTheDocument();
-    expect(screen.queryByRole('switch', { name: 'Участие в программе' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: 'Активировать аккаунт' })).not.toBeInTheDocument();
   });
 
   it('opens balance top-up from the page heading', () => {
@@ -73,20 +76,60 @@ describe('OverviewPage', () => {
     expect(screen.queryByText('Суточное списание')).not.toBeInTheDocument();
   });
 
-  it('shows a blocked account without participation controls', async () => {
+  it('shows a blocked account without participation controls or a daily charge', () => {
     useUserStore.setState({ user: { ...user, account_status: 'blocked' } });
     renderPage();
-    expect(screen.queryByRole('switch', { name: 'Участие в программе' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('switch', { name: 'Активировать аккаунт' })).not.toBeInTheDocument();
     expect(screen.getByText('Аккаунт заблокирован')).toBeInTheDocument();
-    expect((await screen.findByText('Суточное списание')).closest('div')).toHaveAttribute('data-tone', 'muted');
+    expect(screen.queryByText('Суточное списание')).not.toBeInTheDocument();
+    expect(getMyDailyCharge).not.toHaveBeenCalled();
   });
 
-  it('mutes the daily charge for a paused account', async () => {
+  it('lets a paused account activate itself and refreshes its daily charge', async () => {
+    const browserUser = userEvent.setup();
     useUserStore.setState({ user: { ...user, account_status: 'paused' } });
+    vi.mocked(activateMyAccount).mockResolvedValue({ ...user, account_status: 'active' });
     renderPage();
     expect(screen.getByText('Аккаунт приостановлен')).toBeInTheDocument();
     expect(screen.getByText('Списания отменены, VPN-профиль заблокирован.')).toBeInTheDocument();
-    expect((await screen.findByText('Суточное списание')).closest('div')).toHaveAttribute('data-tone', 'muted');
+    expect(screen.queryByText('Суточное списание')).not.toBeInTheDocument();
+    expect(getMyDailyCharge).not.toHaveBeenCalled();
+
+    await browserUser.click(screen.getByRole('switch', { name: 'Активировать аккаунт' }));
+
+    expect(activateMyAccount).toHaveBeenCalledOnce();
+    expect(await screen.findByText('Аккаунт активен')).toBeInTheDocument();
+    expect(await screen.findByText('Суточное списание')).toBeInTheDocument();
+    expect(useUserStore.getState().user?.account_status).toBe('active');
+  });
+
+  it('disables activation below the allowed balance and explains why', () => {
+    useUserStore.setState({
+      user: { ...user, account_status: 'paused', balance: '-200.01' },
+    });
+    renderPage();
+
+    expect(screen.getByRole('switch', { name: 'Активировать аккаунт' })).toBeDisabled();
+    expect(screen.getByText('Пополните баланс для активации')).toBeInTheDocument();
+    expect(screen.queryByText('Суточное списание')).not.toBeInTheDocument();
+  });
+
+  it('shows an activation error and restores the switch', async () => {
+    const browserUser = userEvent.setup();
+    useUserStore.setState({ user: { ...user, account_status: 'paused' } });
+    vi.mocked(activateMyAccount).mockRejectedValue(new ApiError({
+      status: 503,
+      code: 'activation_failed',
+      message: 'Активация временно недоступна',
+    }));
+    renderPage();
+
+    await browserUser.click(screen.getByRole('switch', { name: 'Активировать аккаунт' }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Активация временно недоступна');
+    await waitFor(() => {
+      expect(screen.getByRole('switch', { name: 'Активировать аккаунт' })).not.toBeDisabled();
+    });
   });
 
   it('does not duplicate password controls from the profile menu', () => {

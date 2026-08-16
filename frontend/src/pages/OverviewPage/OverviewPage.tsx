@@ -11,7 +11,12 @@ import styles from './OverviewPage.module.scss';
 export function OverviewPage() {
   const user = useUserStore((state) => state.user)!;
   const [topUpOpen, setTopUpOpen] = useState(false);
-  const dailyChargeQuery = useQuery({ queryKey: myDailyChargeKey, queryFn: getMyDailyCharge });
+  const active = user.account_status === 'active';
+  const dailyChargeQuery = useQuery({
+    queryKey: myDailyChargeKey,
+    queryFn: getMyDailyCharge,
+    enabled: active,
+  });
 
   return (
     <div className={styles.page}>
@@ -29,7 +34,9 @@ export function OverviewPage() {
         accountStatus={user.account_status}
         balance={user.balance}
         negativeBalanceLimit={user.negative_balance_limit}
-        dailyCharge={dailyChargeQuery.isPending ? undefined : dailyChargeQuery.data?.daily_charge ?? null}
+        dailyCharge={active && dailyChargeQuery.isPending
+          ? undefined
+          : dailyChargeQuery.data?.daily_charge ?? null}
       />
       <VpnAccessPanel accountStatus={user.account_status} />
       <TopUpModal open={topUpOpen} onClose={() => setTopUpOpen(false)} />

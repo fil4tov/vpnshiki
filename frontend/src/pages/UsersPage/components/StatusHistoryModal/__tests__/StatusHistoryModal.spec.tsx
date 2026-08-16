@@ -29,6 +29,11 @@ describe('StatusHistoryModal', () => {
   it('shows transitions, causes and actors in reverse chronological order', async () => {
     vi.mocked(getUserStatusHistory).mockResolvedValue([
       {
+        id: 'user', previous_status: 'paused', new_status: 'active',
+        changed_by_user_id: 'user-one', changed_by_name: 'Марина', source: 'user',
+        effective_at: '2026-08-17T08:00:00Z',
+      },
+      {
         id: 'top-up', previous_status: 'blocked', new_status: 'active',
         changed_by_user_id: null, changed_by_name: null, source: 'top_up',
         effective_at: '2026-08-16T11:32:00Z',
@@ -51,17 +56,20 @@ describe('StatusHistoryModal', () => {
       </QueryClientProvider>,
     );
 
-    expect(await screen.findByText('Баланс снова в допустимых пределах')).toBeInTheDocument();
+    expect(await screen.findByText('Аккаунт активирован пользователем')).toBeInTheDocument();
+    expect(screen.getByText('Активировал Марина')).toBeInTheDocument();
+    expect(screen.getByText('Баланс снова в допустимых пределах')).toBeInTheDocument();
     expect(screen.getByText('Аккаунт работает без ограничений')).toBeInTheDocument();
-    expect(screen.getByText('с 16 августа')).toBeInTheDocument();
+    expect(screen.getByText('с 17 августа')).toBeInTheDocument();
     expect(screen.getByText('Превышен допустимый минус')).toBeInTheDocument();
     expect(screen.getByText('Изменил admin')).toBeInTheDocument();
 
     const events = screen.getAllByRole('article');
-    expect(within(events[0]).getByText('пополнение')).toBeInTheDocument();
-    expect(within(events[0]).getByText('16.08.2026')).toBeInTheDocument();
-    expect(within(events[0]).getByText('14:32')).toBeInTheDocument();
-    expect(within(events[1]).getByText('биллинг')).toBeInTheDocument();
-    expect(within(events[2]).getByText('админ')).toBeInTheDocument();
+    expect(within(events[0]).getByText('пользователь')).toBeInTheDocument();
+    expect(within(events[0]).getByText('17.08.2026')).toBeInTheDocument();
+    expect(within(events[0]).getByText('11:00')).toBeInTheDocument();
+    expect(within(events[1]).getByText('пополнение')).toBeInTheDocument();
+    expect(within(events[2]).getByText('биллинг')).toBeInTheDocument();
+    expect(within(events[3]).getByText('админ')).toBeInTheDocument();
   });
 });

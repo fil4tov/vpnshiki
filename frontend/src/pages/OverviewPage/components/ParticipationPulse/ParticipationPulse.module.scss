@@ -13,8 +13,6 @@
 .dailyCharge span { display: inline-flex; align-items: center; gap: 7px; color: var(--positive); font-size: .7rem; }
 .dailyCharge span i { width: 5px; height: 5px; flex: 0 0 auto; background: currentColor; border-radius: 50%; box-shadow: 0 0 10px currentColor; }
 .dailyCharge strong { color: var(--text); font-family: var(--font-data); font-size: 1.08rem; font-weight: 500; letter-spacing: -.035em; white-space: nowrap; }
-.inactiveCharge span, .inactiveCharge strong { color: var(--text-muted); }
-.inactiveCharge span i { box-shadow: 0 0 7px color-mix(in srgb, var(--text-muted) 35%, transparent); }
 .dailyChargeSkeleton { position: relative; width: min(248px,100%); overflow: hidden; }
 .dailyChargeSkeleton::after { position: absolute; inset: 0; content: ''; background: linear-gradient(105deg,transparent 20%,var(--surface-muted) 42%,color-mix(in srgb,var(--text-muted) 13%,transparent) 50%,var(--surface-muted) 58%,transparent 80%); transform: translateX(-100%); animation: charge-shimmer 1.35s ease-in-out infinite; }
 

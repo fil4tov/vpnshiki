@@ -33,6 +33,7 @@ class StatusChangeSource(StrEnum):
     ADMIN = "admin"
     BILLING = "billing"
     TOP_UP = "top_up"
+    USER = "user"
 
 
 class UserTopUp(Base):
@@ -104,7 +105,7 @@ class UserStatusHistory(Base):
             name="ck_user_status_history_new",
         ),
         CheckConstraint(
-            "source IN ('bootstrap', 'admin', 'billing', 'top_up')",
+            "source IN ('bootstrap', 'admin', 'billing', 'top_up', 'user')",
             name="ck_user_status_history_source",
         ),
         Index(

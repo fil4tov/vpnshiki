@@ -3,6 +3,7 @@ import { FiLock, FiPause, FiRadio } from 'react-icons/fi';
 import type { AccountStatus } from '#entities/user';
 import { formatMoney, isNegativeMoney } from '#shared/lib/money';
 
+import { ActivationControl } from './components';
 import styles from './ParticipationPulse.module.scss';
 
 interface ParticipationPulseProps {
@@ -29,21 +30,23 @@ export function ParticipationPulse({ accountStatus, balance, negativeBalanceLimi
           <span className={styles.statusDot} aria-hidden="true" />
           <div><span>Статус аккаунта</span><strong>{status}</strong></div>
         </div>
-        {dailyCharge === undefined ? (
+        {active && dailyCharge === undefined ? (
           <div
             className={`${styles.dailyCharge} ${styles.dailyChargeSkeleton}`}
             role="status"
             aria-label="Загрузка суточного списания"
           />
-        ) : (
+        ) : active ? (
           <div
-            className={`${styles.dailyCharge} ${active ? '' : styles.inactiveCharge}`}
-            data-tone={active ? 'active' : 'muted'}
+            className={styles.dailyCharge}
+            data-tone="active"
           >
             <span><i aria-hidden="true" />Суточное списание</span>
-            <strong>{dailyCharge === null ? '—' : formatMoney(dailyCharge)}</strong>
+            <strong>{dailyCharge == null ? '—' : formatMoney(dailyCharge)}</strong>
           </div>
-        )}
+        ) : accountStatus === 'paused' ? (
+          <ActivationControl balance={balance} negativeBalanceLimit={negativeBalanceLimit} />
+        ) : null}
       </div>
       <div className={styles.mainContent}>
         <div className={styles.orbit} aria-hidden="true"><div className={styles.core}>{blocked ? <FiLock /> : active ? <FiRadio /> : <FiPause />}</div></div>

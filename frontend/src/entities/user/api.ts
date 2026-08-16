@@ -21,6 +21,7 @@ export const getCurrentUser = () => apiRequest<User>('auth/me');
 export const login = (payload: LoginPayload) => apiRequest<User>('auth/login', { method: 'post', json: payload });
 export const logout = () => apiRequest<void>('auth/logout', { method: 'post' });
 export const getMyDailyCharge = () => apiRequest<DailyCharge>('users/me/daily-charge');
+export const activateMyAccount = () => apiRequest<User>('users/me/activation', { method: 'post' });
 export const topUpMyBalance = (payload: UserTopUpPayload) => apiRequest<User>(
   'users/me/top-ups',
   { method: 'post', json: payload },

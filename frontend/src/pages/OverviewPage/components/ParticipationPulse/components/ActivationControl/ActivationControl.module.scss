@@ -1,0 +1,29 @@
+.control {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 12px;
+}
+
+.copy {
+  display: grid;
+  gap: 3px;
+  text-align: left;
+}
+
+.copy strong {
+  color: var(--text);
+  font-size: .78rem;
+  font-weight: 600;
+}
+
+.copy small {
+  max-width: 230px;
+  color: var(--text-muted);
+  font-size: .68rem;
+  line-height: 1.35;
+}
+
+.copy small[role='alert'] {
+  color: var(--danger);
+}

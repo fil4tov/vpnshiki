@@ -50,6 +50,7 @@ const sourceLabels: Record<StatusChangeSource, string> = {
   admin: 'админ',
   billing: 'биллинг',
   top_up: 'пополнение',
+  user: 'пользователь',
 };
 
 function eventReason(event: UserStatusHistory) {
@@ -58,6 +59,7 @@ function eventReason(event: UserStatusHistory) {
   if (event.source === 'billing' && event.new_status === 'blocked') {
     return 'Превышен допустимый минус';
   }
+  if (event.source === 'user') return 'Аккаунт активирован пользователем';
   if (event.source === 'admin') {
     if (event.new_status === 'active') return 'Аккаунт активирован администратором';
     if (event.new_status === 'paused') return 'Участие приостановлено вручную';
@@ -69,6 +71,9 @@ function eventReason(event: UserStatusHistory) {
 function eventMeta(event: UserStatusHistory) {
   if (event.source === 'top_up') return 'Автоматически после пополнения баланса';
   if (event.source === 'billing') return 'Автоматически по результатам биллинга';
+  if (event.source === 'user') {
+    return `Активировал ${event.changed_by_name ?? 'пользователь'}`;
+  }
   if (event.source === 'admin') {
     return `Изменил ${event.changed_by_name ?? 'администратор'}`;
   }
