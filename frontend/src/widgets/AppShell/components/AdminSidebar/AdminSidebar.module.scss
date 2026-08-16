@@ -25,22 +25,42 @@
 .link:focus-visible, .activeLink:focus-visible { outline: none; box-shadow: var(--focus); }
 
 @media (max-width: 760px) {
-  .sidebar { position: static; grid-row: 2; grid-column: 1; width: 100%; height: auto; padding: 10px 14px; border-right: 0; border-bottom: 1px solid var(--border); }
-  .navigation { display: flex; }
-  .link, .activeLink { min-height: 40px; }
+  .sidebar { position: static; grid-row: 2; grid-column: 1; width: 100%; height: auto; padding: 10px 14px 12px; border-right: 0; border-bottom: 1px solid var(--border); }
+  .navigation {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+    padding: 4px;
+    background: color-mix(in srgb, var(--surface-muted) 76%, transparent);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--text) 5%, transparent);
+  }
+  .link, .activeLink {
+    min-width: 0;
+    min-height: 44px;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 10px;
+    font-size: .76rem;
+    font-weight: 650;
+    white-space: nowrap;
+    border-radius: 12px;
+  }
+  .link span, .activeLink span { overflow: hidden; text-overflow: ellipsis; }
+  .link:hover { background: color-mix(in srgb, var(--surface) 68%, transparent); }
   .activeLink {
-    background: linear-gradient(0deg, color-mix(in srgb, var(--accent-bright) 16%, transparent), transparent 82%);
-    background-size: 100% calc(100% - 8px);
+    background: linear-gradient(135deg, color-mix(in srgb, var(--accent-bright) 22%, var(--surface)), color-mix(in srgb, var(--accent) 11%, var(--surface)));
+    border-color: color-mix(in srgb, var(--accent-bright) 30%, var(--border));
+    box-shadow: 0 8px 22px color-mix(in srgb, var(--accent) 12%, transparent), inset 0 1px 0 color-mix(in srgb, white 10%, transparent);
 
     &::before {
-      top: auto;
-      right: 8px;
-      bottom: -1px;
-      left: 8px;
-      width: auto;
-      height: 2px;
-      background: linear-gradient(90deg, var(--accent-bright), transparent);
-      border-radius: 999px 999px 0 0;
+      content: none;
     }
   }
+}
+
+@media (max-width: 380px) {
+  .sidebar { padding-inline: 10px; }
+  .link, .activeLink { gap: 6px; padding-inline: 7px; font-size: .72rem; }
 }

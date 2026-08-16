@@ -71,6 +71,14 @@
 .security { color: #cf98ff; background: rgba(154, 77, 220, .18); }
 .tls { color: #68e3a9; background: rgba(50, 184, 114, .16); }
 
+:global(:root[data-theme='light']) {
+  .vless { color: #2454a6; }
+  .hysteria { color: #a5226d; }
+  .transport { color: #815100; }
+  .security { color: #7134a7; }
+  .tls { color: #126947; }
+}
+
 .details p {
   overflow: hidden;
   margin: 0;
