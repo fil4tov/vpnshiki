@@ -5,7 +5,8 @@ services:
     ports: !reset []
 
   postgres:
-    ports: !reset []
+   ports: !override
+    - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
 
   frontend:
     build: !reset null
