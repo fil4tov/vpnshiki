@@ -51,7 +51,7 @@ function getMonthKey(createdAt: string) {
   return `${year}-${month}`;
 }
 
-function groupCharges(charges: UserCharge[]): MonthlyHistoryGroup[] {
+function groupCharges(charges: UserCharge[], includeTariffPlan: boolean): MonthlyHistoryGroup[] {
   const groups = new Map<string, UserCharge[]>();
   charges.forEach((charge) => {
     const key = getMonthKey(charge.created_at);
@@ -73,7 +73,7 @@ function groupCharges(charges: UserCharge[]): MonthlyHistoryGroup[] {
         id: charge.id,
         dateTime: charge.created_at,
         dateLabel: dateFormatter.format(new Date(charge.created_at)),
-        description: charge.tariff_plan_name,
+        ...(includeTariffPlan ? { description: charge.tariff_plan_name } : {}),
         amount: `−${formatMoney(charge.amount)}`,
       })),
     };
@@ -95,7 +95,10 @@ export function ChargeHistoryModal({
     queryKey: mode === 'admin' ? userChargesKey(user.id) : myChargesKey,
     queryFn: mode === 'admin' ? () => getUserCharges(user.id) : getMyCharges,
   });
-  const groups = useMemo(() => groupCharges(historyQuery.data ?? []), [historyQuery.data]);
+  const groups = useMemo(
+    () => groupCharges(historyQuery.data ?? [], mode === 'admin'),
+    [historyQuery.data, mode],
+  );
   const fetchedTotal = (historyQuery.data ?? []).reduce(
     (sum, charge) => sum + Math.round(Number(charge.amount) * 100),
     0,
@@ -127,7 +130,11 @@ export function ChargeHistoryModal({
       ) : (
         <MonthlyHistory
           groups={groups}
-          columnLabels={{ date: 'Дата', description: 'Тарифный план', amount: 'Сумма' }}
+          columnLabels={{
+            date: 'Дата',
+            ...(mode === 'admin' ? { description: 'Тарифный план' } : {}),
+            amount: 'Сумма',
+          }}
         />
       )}
     </Modal>

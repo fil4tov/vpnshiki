@@ -58,12 +58,27 @@ describe('ChargeHistoryModal', () => {
     expect(screen.queryByText('TP_01.08.2026')).not.toBeInTheDocument();
   });
 
-  it('uses the self endpoint and shows an empty history', async () => {
+  it('uses the self endpoint without the tariff plan column', async () => {
+    vi.mocked(getMyCharges).mockResolvedValue([
+      {
+        id: 'self-charge', amount: '32.26', tariff_plan_id: 'plan-august',
+        tariff_plan_name: 'TP_01.08.2026', created_at: '2026-08-15T21:00:00Z',
+      },
+    ]);
+    renderModal('self');
+
+    expect(await screen.findByText('Дата')).toBeInTheDocument();
+    expect(getMyCharges).toHaveBeenCalledOnce();
+    expect(screen.getByText('Сумма')).toBeInTheDocument();
+    expect(screen.queryByText('Тарифный план')).not.toBeInTheDocument();
+    expect(screen.queryByText('TP_01.08.2026')).not.toBeInTheDocument();
+  });
+
+  it('shows an empty self history', async () => {
     vi.mocked(getMyCharges).mockResolvedValue([]);
     renderModal('self');
 
     expect(await screen.findByText('У пользователя пока не было списаний.')).toBeInTheDocument();
-    expect(getMyCharges).toHaveBeenCalledOnce();
     expect(screen.getByText('0,00 ₽')).toBeInTheDocument();
   });
 });
