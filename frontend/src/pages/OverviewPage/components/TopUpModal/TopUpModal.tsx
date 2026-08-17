@@ -1,6 +1,12 @@
 import { useForm } from 'react-hook-form';
+import { useQueryClient } from '@tanstack/react-query';
 
-import { topUpMyBalance, useUserStore } from '#entities/user';
+import {
+  adminUsersKey,
+  myTopUpsKey,
+  topUpMyBalance,
+  useUserStore,
+} from '#entities/user';
 import { ApiError } from '#shared/api';
 import { Button, Modal, TextField } from '#shared/ui';
 
@@ -16,6 +22,7 @@ interface TopUpModalProps {
 }
 
 export function TopUpModal({ open, onClose }: TopUpModalProps) {
+  const queryClient = useQueryClient();
   const setUser = useUserStore((state) => state.setUser);
   const {
     register,
@@ -38,6 +45,8 @@ export function TopUpModal({ open, onClose }: TopUpModalProps) {
   const submit = handleSubmit(async (values) => {
     try {
       setUser(await topUpMyBalance({ amount: values.amount }));
+      void queryClient.invalidateQueries({ queryKey: myTopUpsKey, exact: true });
+      void queryClient.invalidateQueries({ queryKey: adminUsersKey, exact: true });
       closeAfterSuccess();
     } catch (error) {
       if (error instanceof ApiError && error.fieldErrors?.amount) {

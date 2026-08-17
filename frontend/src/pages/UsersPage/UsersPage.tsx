@@ -4,10 +4,12 @@ import { FiClock, FiEdit3, FiKey, FiPlus, FiSearch, FiTrash2, FiUsers } from 're
 
 import {
   adminUsersKey,
+  ChargeHistoryModal,
   createUser,
   deleteUser,
   getUsers,
   resetUserPassword,
+  TopUpHistoryModal,
   updateUser,
   useUserStore,
 } from '#entities/user';
@@ -16,7 +18,6 @@ import { formatMoney, isNegativeMoney } from '#shared/lib/money';
 import { Badge, Button, LoadingState, Modal, Surface, TableActionButton } from '#shared/ui';
 
 import {
-  ChargeHistoryModal,
   DeleteUserConfirmation,
   ResetPasswordForm,
   SortableColumnHeader,
@@ -44,7 +45,8 @@ type UserSortKey =
   | 'vpnStatus'
   | 'balance'
   | 'negativeBalanceLimit'
-  | 'totalCharged';
+  | 'totalCharged'
+  | 'totalTopUps';
 
 interface UserSort {
   key: UserSortKey;
@@ -73,6 +75,8 @@ function compareUsers(left: AdminUser, right: AdminUser, key: UserSortKey) {
       return Number(left.negative_balance_limit) - Number(right.negative_balance_limit);
     case 'totalCharged':
       return Number(left.total_charged) - Number(right.total_charged);
+    case 'totalTopUps':
+      return Number(left.total_top_ups) - Number(right.total_top_ups);
   }
 }
 
@@ -87,6 +91,7 @@ export function UsersPage() {
   const [editing, setEditing] = useState<User | null>(null);
   const [resetting, setResetting] = useState<User | null>(null);
   const [historyUser, setHistoryUser] = useState<AdminUser | null>(null);
+  const [topUpHistoryUser, setTopUpHistoryUser] = useState<AdminUser | null>(null);
   const [statusHistoryUser, setStatusHistoryUser] = useState<AdminUser | null>(null);
   const [deleting, setDeleting] = useState<User | null>(null);
   const usersQuery = useQuery({ queryKey: adminUsersKey, queryFn: getUsers });
@@ -181,6 +186,7 @@ export function UsersPage() {
                 <SortableColumnHeader label="Баланс" direction={sortDirection('balance')} onSort={() => toggleSort('balance')} />
                 <SortableColumnHeader label="Лимит" direction={sortDirection('negativeBalanceLimit')} onSort={() => toggleSort('negativeBalanceLimit')} />
                 <SortableColumnHeader label="Всего списаний" direction={sortDirection('totalCharged')} onSort={() => toggleSort('totalCharged')} />
+                <SortableColumnHeader label="Всего пополнений" direction={sortDirection('totalTopUps')} onSort={() => toggleSort('totalTopUps')} />
                 <th><span className={styles.srOnly}>Действия</span></th>
               </tr></thead>
               <tbody>{users.map((user) => {
@@ -210,13 +216,26 @@ export function UsersPage() {
                   </td>
                   <td data-label="Лимит" className={styles.money}>{formatMoney(user.negative_balance_limit)}</td>
                   <td data-label="Всего списаний" className={styles.money}>
-                    <div className={styles.chargeTotal}>
+                    <div className={styles.transactionTotal}>
                       <span>{formatMoney(user.total_charged)}</span>
                       <TableActionButton
                         className={styles.historyButton}
                         title="История списаний"
                         onClick={() => setHistoryUser(user)}
                         aria-label={`Открыть историю списаний ${user.name}`}
+                      >
+                        <FiClock aria-hidden="true" />
+                      </TableActionButton>
+                    </div>
+                  </td>
+                  <td data-label="Всего пополнений" className={styles.money}>
+                    <div className={styles.transactionTotal}>
+                      <span>{formatMoney(user.total_top_ups)}</span>
+                      <TableActionButton
+                        className={styles.historyButton}
+                        title="История пополнений"
+                        onClick={() => setTopUpHistoryUser(user)}
+                        aria-label={`Открыть историю пополнений ${user.name}`}
                       >
                         <FiClock aria-hidden="true" />
                       </TableActionButton>
@@ -245,7 +264,22 @@ export function UsersPage() {
       <Modal open={createOpen} title="Новый пользователь" onClose={() => setCreateOpen(false)}><UserForm onCancel={() => setCreateOpen(false)} onSubmit={saveCreate} /></Modal>
       <Modal open={Boolean(editing)} title="Настройки пользователя" onClose={() => setEditing(null)}>{editing && <UserForm user={editing} onCancel={() => setEditing(null)} onSubmit={saveEdit} />}</Modal>
       <Modal open={Boolean(resetting)} title="Сбросить пароль" onClose={() => setResetting(null)}>{resetting && <ResetPasswordForm name={resetting.name} onCancel={() => setResetting(null)} onSubmit={savePassword} />}</Modal>
-      {historyUser && <ChargeHistoryModal user={historyUser} onClose={() => setHistoryUser(null)} />}
+      {historyUser && (
+        <ChargeHistoryModal
+          user={historyUser}
+          mode="admin"
+          total={historyUser.total_charged}
+          onClose={() => setHistoryUser(null)}
+        />
+      )}
+      {topUpHistoryUser && (
+        <TopUpHistoryModal
+          user={topUpHistoryUser}
+          mode="admin"
+          total={topUpHistoryUser.total_top_ups}
+          onClose={() => setTopUpHistoryUser(null)}
+        />
+      )}
       {statusHistoryUser && (
         <StatusHistoryModal user={statusHistoryUser} onClose={() => setStatusHistoryUser(null)} />
       )}

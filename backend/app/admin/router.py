@@ -9,7 +9,7 @@ from sqlalchemy.orm import aliased
 from app.auth.dependencies import CurrentAdmin, Database
 from app.auth.models import AuthSession
 from app.auth.security import hash_password
-from app.billing.models import StatusChangeSource, UserDailyCharge, UserStatusHistory
+from app.billing.models import StatusChangeSource, UserDailyCharge, UserStatusHistory, UserTopUp
 from app.billing.service import (
     add_initial_status_history,
     profile_email,
@@ -17,7 +17,7 @@ from app.billing.service import (
     record_status_change,
 )
 from app.errors import ApiError
-from app.tariff_plans.models import TariffPlan
+from app.users.history import get_user_charge_history, get_user_top_up_history
 from app.users.models import AccountStatus, User, UserRole
 from app.users.schemas import (
     AdminPasswordReset,
@@ -27,6 +27,7 @@ from app.users.schemas import (
     UserChargeRead,
     UserRead,
     UserStatusHistoryRead,
+    UserTopUpRead,
     VpnStatus,
 )
 from app.vpn_access.dependencies import XuiProvider
@@ -81,13 +82,23 @@ async def list_users(
         .group_by(UserDailyCharge.user_id)
         .subquery()
     )
+    top_up_totals = (
+        select(
+            UserTopUp.user_id,
+            func.sum(UserTopUp.amount).label("total_top_ups"),
+        )
+        .group_by(UserTopUp.user_id)
+        .subquery()
+    )
     rows = (
         await db.execute(
             select(
                 User,
                 func.coalesce(charge_totals.c.total_charged, 0).label("total_charged"),
+                func.coalesce(top_up_totals.c.total_top_ups, 0).label("total_top_ups"),
             )
             .outerjoin(charge_totals, charge_totals.c.user_id == User.id)
+            .outerjoin(top_up_totals, top_up_totals.c.user_id == User.id)
             .where(User.deleted_at.is_(None))
             .order_by(func.lower(User.name))
         )
@@ -101,6 +112,7 @@ async def list_users(
             {
                 **UserRead.model_validate(user).model_dump(),
                 "total_charged": total_charged,
+                "total_top_ups": total_top_ups,
                 "vpn_status": (
                     VpnStatus.UNKNOWN
                     if online_clients is None
@@ -113,7 +125,7 @@ async def list_users(
                 ),
             }
         )
-        for user, total_charged in rows
+        for user, total_charged, total_top_ups in rows
     ]
 
 
@@ -124,24 +136,17 @@ async def list_user_charges(
     db: Database,
 ) -> list[UserChargeRead]:
     await _get_user(db, user_id)
-    rows = (
-        await db.execute(
-            select(UserDailyCharge, TariffPlan.name)
-            .join(TariffPlan, TariffPlan.id == UserDailyCharge.tariff_plan_id)
-            .where(UserDailyCharge.user_id == user_id)
-            .order_by(UserDailyCharge.created_at.desc())
-        )
-    ).all()
-    return [
-        UserChargeRead(
-            id=charge.id,
-            amount=charge.amount,
-            tariff_plan_id=charge.tariff_plan_id,
-            tariff_plan_name=tariff_plan_name,
-            created_at=charge.created_at,
-        )
-        for charge, tariff_plan_name in rows
-    ]
+    return await get_user_charge_history(db, user_id)
+
+
+@router.get("/{user_id}/top-ups", response_model=list[UserTopUpRead])
+async def list_user_top_ups(
+    user_id: UUID,
+    _admin: CurrentAdmin,
+    db: Database,
+) -> list[UserTopUpRead]:
+    await _get_user(db, user_id)
+    return await get_user_top_up_history(db, user_id)
 
 
 @router.get("/{user_id}/status-history", response_model=list[UserStatusHistoryRead])

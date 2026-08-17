@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.auth.models import AuthSession
 from app.auth.security import hash_password
-from app.billing.models import UserDailyCharge, UserStatusHistory
+from app.billing.models import UserDailyCharge, UserStatusHistory, UserTopUp
 from app.errors import ApiError
 from app.main import app
 from app.tariff_plans.models import TariffPlan
@@ -120,6 +120,20 @@ async def test_admin_creates_and_updates_user(
                     tariff_plan_id=plan.id,
                     created_at=datetime(2026, 8, 2, tzinfo=UTC),
                 ),
+                UserTopUp(
+                    user_id=user_id,
+                    amount=Decimal("4.75"),
+                    balance_before=Decimal("2.34"),
+                    balance_after=Decimal("7.09"),
+                    created_at=datetime(2026, 8, 3, tzinfo=UTC),
+                ),
+                UserTopUp(
+                    user_id=user_id,
+                    amount=Decimal("5.25"),
+                    balance_before=Decimal("7.09"),
+                    balance_after=Decimal("12.34"),
+                    created_at=datetime(2026, 8, 4, tzinfo=UTC),
+                ),
             ]
         )
         await db.commit()
@@ -129,6 +143,10 @@ async def test_admin_creates_and_updates_user(
     assert {user["name"]: user["total_charged"] for user in users} == {
         "admin": "0.00",
         "Лена": "30.75",
+    }
+    assert {user["name"]: user["total_top_ups"] for user in users} == {
+        "admin": "0.00",
+        "Лена": "10.00",
     }
     assert {user["name"]: user["vpnStatus"] for user in users} == {
         "admin": "offline",
@@ -141,6 +159,17 @@ async def test_admin_creates_and_updates_user(
         "TP_01.08.2026",
         "TP_01.08.2026",
     ]
+    top_ups = (await client.get(f"/api/admin/users/{user_id}/top-ups")).json()
+    assert [entry["amount"] for entry in top_ups] == ["5.25", "4.75"]
+    assert [entry["created_at"][:10] for entry in top_ups] == ["2026-08-04", "2026-08-03"]
+
+    await client.post("/api/auth/logout")
+    await login(client, "Лена", "strong-password")
+    own_charges = (await client.get("/api/users/me/charges")).json()
+    own_top_ups = (await client.get("/api/users/me/top-ups")).json()
+    assert [entry["id"] for entry in own_charges] == [entry["id"] for entry in history]
+    assert [entry["id"] for entry in own_top_ups] == [entry["id"] for entry in top_ups]
+    assert (await client.get(f"/api/admin/users/{user_id}/top-ups")).status_code == 403
 
 
 async def test_admin_reads_user_status_history_with_actor(

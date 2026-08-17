@@ -13,8 +13,16 @@ from app.billing.service import queue_vpn_sync, reactivate_if_billing_blocked, r
 from app.config import get_settings
 from app.errors import ApiError
 from app.tariff_plans.service import get_user_daily_charge
+from app.users.history import get_user_charge_history, get_user_top_up_history
 from app.users.models import AccountStatus, User
-from app.users.schemas import DailyChargeRead, PasswordChange, UserRead, UserTopUpCreate
+from app.users.schemas import (
+    DailyChargeRead,
+    PasswordChange,
+    UserChargeRead,
+    UserRead,
+    UserTopUpCreate,
+    UserTopUpRead,
+)
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 MAX_MONEY = Decimal("999999999999.99")
@@ -23,6 +31,16 @@ MAX_MONEY = Decimal("999999999999.99")
 @router.get("/me/daily-charge", response_model=DailyChargeRead)
 async def read_daily_charge(user: CurrentUser, db: Database) -> DailyChargeRead:
     return DailyChargeRead(daily_charge=await get_user_daily_charge(db, user))
+
+
+@router.get("/me/charges", response_model=list[UserChargeRead])
+async def read_my_charge_history(user: CurrentUser, db: Database) -> list[UserChargeRead]:
+    return await get_user_charge_history(db, user.id)
+
+
+@router.get("/me/top-ups", response_model=list[UserTopUpRead])
+async def read_my_top_up_history(user: CurrentUser, db: Database) -> list[UserTopUpRead]:
+    return await get_user_top_up_history(db, user.id)
 
 
 @router.post("/me/activation", response_model=UserRead)

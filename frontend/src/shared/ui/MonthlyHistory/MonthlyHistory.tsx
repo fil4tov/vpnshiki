@@ -7,7 +7,7 @@ export interface MonthlyHistoryRow {
   id: string;
   dateTime: string;
   dateLabel: string;
-  description: string;
+  description?: string;
   amount: string;
   totalAmount?: string;
 }
@@ -22,7 +22,7 @@ export interface MonthlyHistoryGroup {
 
 interface MonthlyHistoryColumnLabels {
   date: string;
-  description: string;
+  description?: string;
   amount: string;
   totalAmount?: string;
 }
@@ -65,10 +65,10 @@ export function MonthlyHistory({
               <div id={panelId} className={styles.rows}>
                 {columnLabels && (
                   <div
-                    className={`${styles.row} ${styles.columnHeader} ${columnLabels.totalAmount ? styles.rowWithTotal : ''}`}
+                    className={`${styles.row} ${styles.columnHeader} ${columnLabels.totalAmount ? styles.rowWithTotal : ''} ${columnLabels.description ? '' : styles.rowWithoutDescription}`}
                   >
                     <span>{columnLabels.date}</span>
-                    <span>{columnLabels.description}</span>
+                    {columnLabels.description && <span>{columnLabels.description}</span>}
                     <span>{columnLabels.amount}</span>
                     {columnLabels.totalAmount && <span>{columnLabels.totalAmount}</span>}
                   </div>
@@ -76,10 +76,10 @@ export function MonthlyHistory({
                 {group.rows.map((row) => (
                   <div
                     key={row.id}
-                    className={`${styles.row} ${row.totalAmount ? styles.rowWithTotal : ''}`}
+                    className={`${styles.row} ${row.totalAmount ? styles.rowWithTotal : ''} ${row.description ? '' : styles.rowWithoutDescription}`}
                   >
                     <time dateTime={row.dateTime}>{row.dateLabel}</time>
-                    <span title={row.description}>{row.description}</span>
+                    {row.description && <span title={row.description}>{row.description}</span>}
                     <strong data-label={columnLabels?.amount}>{row.amount}</strong>
                     {row.totalAmount && (
                       <strong data-label={columnLabels?.totalAmount}>{row.totalAmount}</strong>

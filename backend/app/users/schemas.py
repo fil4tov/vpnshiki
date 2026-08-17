@@ -38,10 +38,11 @@ class UserRead(BaseModel):
 
 class AdminUserRead(UserRead):
     total_charged: Decimal
+    total_top_ups: Decimal
     vpn_status: VpnStatus = Field(serialization_alias="vpnStatus")
 
-    @field_serializer("total_charged")
-    def serialize_total_charged(self, value: Decimal) -> str:
+    @field_serializer("total_charged", "total_top_ups")
+    def serialize_totals(self, value: Decimal) -> str:
         return f"{value:.2f}"
 
 
@@ -50,6 +51,18 @@ class UserChargeRead(BaseModel):
     amount: Decimal
     tariff_plan_id: UUID
     tariff_plan_name: str
+    created_at: datetime
+
+    @field_serializer("amount")
+    def serialize_amount(self, value: Decimal) -> str:
+        return f"{value:.2f}"
+
+
+class UserTopUpRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    amount: Decimal
     created_at: datetime
 
     @field_serializer("amount")

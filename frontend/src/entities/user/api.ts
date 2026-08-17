@@ -9,18 +9,24 @@ import type {
   User,
   UserCharge,
   UserStatusHistory,
+  UserTopUp,
   UserTopUpPayload,
 } from './types';
 
 export const adminUsersKey = ['users'] as const;
 export const userChargesKey = (userId: string) => ['users', userId, 'charges'] as const;
+export const userTopUpsKey = (userId: string) => ['users', userId, 'top-ups'] as const;
 export const userStatusHistoryKey = (userId: string) => ['users', userId, 'status-history'] as const;
 export const myDailyChargeKey = ['users', 'me', 'daily-charge'] as const;
+export const myChargesKey = ['users', 'me', 'charges'] as const;
+export const myTopUpsKey = ['users', 'me', 'top-ups'] as const;
 
 export const getCurrentUser = () => apiRequest<User>('auth/me');
 export const login = (payload: LoginPayload) => apiRequest<User>('auth/login', { method: 'post', json: payload });
 export const logout = () => apiRequest<void>('auth/logout', { method: 'post' });
 export const getMyDailyCharge = () => apiRequest<DailyCharge>('users/me/daily-charge');
+export const getMyCharges = () => apiRequest<UserCharge[]>('users/me/charges');
+export const getMyTopUps = () => apiRequest<UserTopUp[]>('users/me/top-ups');
 export const activateMyAccount = () => apiRequest<User>('users/me/activation', { method: 'post' });
 export const topUpMyBalance = (payload: UserTopUpPayload) => apiRequest<User>(
   'users/me/top-ups',
@@ -32,6 +38,7 @@ export const changeMyPassword = (currentPassword: string, newPassword: string) =
 );
 export const getUsers = () => apiRequest<AdminUser[]>('admin/users');
 export const getUserCharges = (userId: string) => apiRequest<UserCharge[]>(`admin/users/${userId}/charges`);
+export const getUserTopUps = (userId: string) => apiRequest<UserTopUp[]>(`admin/users/${userId}/top-ups`);
 export const getUserStatusHistory = (userId: string) => apiRequest<UserStatusHistory[]>(
   `admin/users/${userId}/status-history`,
 );

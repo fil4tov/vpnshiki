@@ -1,16 +1,18 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 
-import {
-  getUserCharges,
-  userChargesKey,
-} from '#entities/user';
-import type { AdminUser, UserCharge } from '#entities/user';
 import { formatMoney } from '#shared/lib/money';
 import { Button, HistorySummary, LoadingState, Modal, MonthlyHistory } from '#shared/ui';
 import type { MonthlyHistoryGroup } from '#shared/ui';
 
-import styles from './ChargeHistoryModal.module.scss';
+import {
+  getMyCharges,
+  getUserCharges,
+  myChargesKey,
+  userChargesKey,
+} from '../../api';
+import type { User, UserCharge } from '../../types';
+import styles from '../FinancialHistoryModal.module.scss';
 
 const MOSCOW_TIME_ZONE = 'Europe/Moscow';
 const monthLabelFormatter = new Intl.DateTimeFormat('ru-RU', {
@@ -78,12 +80,27 @@ function groupCharges(charges: UserCharge[]): MonthlyHistoryGroup[] {
   });
 }
 
-export function ChargeHistoryModal({ user, onClose }: { user: AdminUser; onClose: () => void }) {
+export function ChargeHistoryModal({
+  user,
+  mode,
+  total,
+  onClose,
+}: {
+  user: Pick<User, 'id' | 'name'>;
+  mode: 'self' | 'admin';
+  total?: string;
+  onClose: () => void;
+}) {
   const historyQuery = useQuery({
-    queryKey: userChargesKey(user.id),
-    queryFn: () => getUserCharges(user.id),
+    queryKey: mode === 'admin' ? userChargesKey(user.id) : myChargesKey,
+    queryFn: mode === 'admin' ? () => getUserCharges(user.id) : getMyCharges,
   });
   const groups = useMemo(() => groupCharges(historyQuery.data ?? []), [historyQuery.data]);
+  const fetchedTotal = (historyQuery.data ?? []).reduce(
+    (sum, charge) => sum + Math.round(Number(charge.amount) * 100),
+    0,
+  );
+  const totalValue = total ?? (historyQuery.data ? (fetchedTotal / 100).toFixed(2) : null);
 
   return (
     <Modal
@@ -94,8 +111,8 @@ export function ChargeHistoryModal({ user, onClose }: { user: AdminUser; onClose
       onClose={onClose}
     >
       <HistorySummary items={[
-        { label: 'Списано за всё время', value: formatMoney(user.total_charged), accent: true },
-        { label: 'Период', value: `${groups.length} мес.` },
+        { label: 'Списано за всё время', value: totalValue ? formatMoney(totalValue) : '—', accent: true },
+        { label: 'Период', value: historyQuery.data ? `${groups.length} мес.` : '—' },
       ]} />
 
       {historyQuery.isLoading ? (
@@ -106,17 +123,11 @@ export function ChargeHistoryModal({ user, onClose }: { user: AdminUser; onClose
           <Button variant="secondary" onClick={() => void historyQuery.refetch()}>Повторить</Button>
         </div>
       ) : groups.length === 0 ? (
-        <div className={styles.message}>
-          <p>У пользователя пока не было списаний.</p>
-        </div>
+        <div className={styles.message}><p>У пользователя пока не было списаний.</p></div>
       ) : (
         <MonthlyHistory
           groups={groups}
-          columnLabels={{
-            date: 'Дата',
-            description: 'Тарифный план',
-            amount: 'Сумма',
-          }}
+          columnLabels={{ date: 'Дата', description: 'Тарифный план', amount: 'Сумма' }}
         />
       )}
     </Modal>

@@ -16,6 +16,7 @@ export interface User {
 
 export interface AdminUser extends User {
   total_charged: string;
+  total_top_ups: string;
   vpnStatus: VpnStatus;
 }
 
@@ -24,6 +25,12 @@ export interface UserCharge {
   amount: string;
   tariff_plan_id: string;
   tariff_plan_name: string;
+  created_at: string;
+}
+
+export interface UserTopUp {
+  id: string;
+  amount: string;
   created_at: string;
 }
 

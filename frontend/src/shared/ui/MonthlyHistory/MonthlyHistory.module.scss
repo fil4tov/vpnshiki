@@ -27,6 +27,7 @@
 .periodTotal strong { display: block; font-family: var(--font-data); font-size: .8rem; font-weight: 400; }
 .rows { border-top: 1px solid var(--border); }
 .row { display: grid; grid-template-columns: 104px 1fr auto; gap: 14px; padding: 12px 16px; border-top: 1px solid color-mix(in srgb, var(--border) 62%, transparent); }
+.rowWithoutDescription { grid-template-columns: 104px 1fr; }
 .rowWithTotal { grid-template-columns: 96px minmax(82px, 1fr) minmax(156px, auto) minmax(96px, auto); gap: 12px; }
 .row:first-child { border-top: 0; }
 .row time { color: var(--text-muted); font-size: .7rem; }
@@ -40,6 +41,7 @@
 @media (max-width: 520px) {
   .periodButton { grid-template-columns: 1fr auto 18px; gap: 9px; padding-inline: 13px; }
   .row { grid-template-columns: 82px 1fr; gap: 7px 12px; padding-inline: 13px; }
+  .rowWithoutDescription { grid-template-columns: 82px 1fr; }
   .row strong { grid-column: 2; }
   .columnHeader { display: none; }
   .rowWithTotal { grid-template-columns: 82px 1fr auto; }

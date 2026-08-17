@@ -73,6 +73,9 @@ async def test_top_up_adds_exact_money_and_history(
 
     assert response.status_code == 200
     assert response.json()["balance"] == "0.30"
+    history_response = await client.get("/api/users/me/top-ups")
+    assert history_response.status_code == 200
+    assert [item["amount"] for item in history_response.json()] == ["0.10"]
     async with session_factory() as db:
         top_ups = (
             await db.scalars(select(UserTopUp).where(UserTopUp.user_id == user_id))
@@ -131,6 +134,8 @@ async def test_top_up_requires_authentication(client: AsyncClient) -> None:
     response = await client.post("/api/users/me/top-ups", json={"amount": "10.00"})
 
     assert response.status_code == 401
+    assert (await client.get("/api/users/me/top-ups")).status_code == 401
+    assert (await client.get("/api/users/me/charges")).status_code == 401
 
 
 async def test_top_up_reactivates_billing_block_at_exact_limit(
@@ -246,6 +251,9 @@ async def test_admin_financial_change_reactivates_without_top_up_history(
 
     assert response.status_code == 200
     assert response.json()["account_status"] == AccountStatus.ACTIVE.value
+    users = (await client.get("/api/admin/users")).json()
+    target = next(user for user in users if user["id"] == str(user_id))
+    assert target["total_top_ups"] == "0.00"
     async with session_factory() as db:
         assert await db.scalar(select(UserTopUp).where(UserTopUp.user_id == user_id)) is None
         status_change = await db.scalar(

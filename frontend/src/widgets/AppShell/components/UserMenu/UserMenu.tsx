@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { FiChevronDown, FiKey, FiLogOut } from 'react-icons/fi';
+import { FiChevronDown, FiKey, FiLogOut, FiMinusCircle, FiPlusCircle } from 'react-icons/fi';
 
-import { ChangePasswordModal, useUserStore } from '#entities/user';
+import {
+  ChangePasswordModal,
+  ChargeHistoryModal,
+  TopUpHistoryModal,
+  useUserStore,
+} from '#entities/user';
 
 import styles from './UserMenu.module.scss';
 
@@ -9,6 +14,8 @@ export function UserMenu() {
   const user = useUserStore((state) => state.user);
   const logout = useUserStore((state) => state.logout);
   const [open, setOpen] = useState(false);
+  const [chargeHistoryOpen, setChargeHistoryOpen] = useState(false);
+  const [topUpHistoryOpen, setTopUpHistoryOpen] = useState(false);
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [passwordSuccess, setPasswordSuccess] = useState('');
   const rootRef = useRef<HTMLDivElement>(null);
@@ -66,7 +73,15 @@ export function UserMenu() {
               <strong>{user.name}</strong>
             </div>
             <div className={styles.menuActions}>
-              <button ref={firstItemRef} type="button" role="menuitem" onClick={() => { setOpen(false); setPasswordOpen(true); }}>
+              <button ref={firstItemRef} type="button" role="menuitem" onClick={() => { setOpen(false); setChargeHistoryOpen(true); }}>
+                <FiMinusCircle aria-hidden="true" />
+                <span>История списаний</span>
+              </button>
+              <button type="button" role="menuitem" onClick={() => { setOpen(false); setTopUpHistoryOpen(true); }}>
+                <FiPlusCircle aria-hidden="true" />
+                <span>История пополнений</span>
+              </button>
+              <button type="button" role="menuitem" onClick={() => { setOpen(false); setPasswordOpen(true); }}>
                 <FiKey aria-hidden="true" />
                 <span>Сменить пароль</span>
               </button>
@@ -83,6 +98,20 @@ export function UserMenu() {
         onClose={() => setPasswordOpen(false)}
         onSuccess={() => setPasswordSuccess('Пароль изменён. Остальные сессии завершены.')}
       />
+      {chargeHistoryOpen && (
+        <ChargeHistoryModal
+          user={user}
+          mode="self"
+          onClose={() => setChargeHistoryOpen(false)}
+        />
+      )}
+      {topUpHistoryOpen && (
+        <TopUpHistoryModal
+          user={user}
+          mode="self"
+          onClose={() => setTopUpHistoryOpen(false)}
+        />
+      )}
       {passwordSuccess && <p className={styles.success} role="status">{passwordSuccess}</p>}
     </>
   );

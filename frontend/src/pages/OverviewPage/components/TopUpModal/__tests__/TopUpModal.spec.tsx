@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
 
@@ -17,6 +18,15 @@ vi.mock('#entities/user', async () => {
   return { ...actual, topUpMyBalance: vi.fn() };
 });
 
+function renderModal(onClose: () => void) {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <TopUpModal open onClose={onClose} />
+    </QueryClientProvider>,
+  );
+}
+
 describe('TopUpModal', () => {
   beforeEach(() => {
     useUserStore.setState({ user, status: 'authenticated' });
@@ -27,7 +37,7 @@ describe('TopUpModal', () => {
     const onClose = vi.fn();
     const updatedUser = { ...user, balance: '35.50' };
     vi.mocked(topUpMyBalance).mockResolvedValue(updatedUser);
-    render(<TopUpModal open onClose={onClose} />);
+    renderModal(onClose);
 
     fireEvent.click(screen.getByRole('button', { name: 'Пополнить' }));
     expect(await screen.findByText('Введите сумму пополнения')).toBeInTheDocument();
@@ -50,7 +60,7 @@ describe('TopUpModal', () => {
       status: 400,
       fieldErrors: { amount: 'Итоговый баланс превышает допустимое значение' },
     }));
-    render(<TopUpModal open onClose={() => undefined} />);
+    renderModal(() => undefined);
 
     fireEvent.change(screen.getByLabelText('Сумма пополнения, ₽'), {
       target: { value: '100' },

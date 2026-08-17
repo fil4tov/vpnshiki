@@ -1,8 +1,12 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { vi } from 'vitest';
 
 import { useUserStore } from '#entities/user';
+
+import { getMyCharges, getMyTopUps } from '../../../entities/user/api';
 
 import { AppShell } from '../AppShell';
 
@@ -12,22 +16,33 @@ const baseUser = {
   created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
 };
 
+vi.mock('../../../entities/user/api', async () => {
+  const actual = await vi.importActual<typeof import('../../../entities/user/api')>('../../../entities/user/api');
+  return { ...actual, getMyCharges: vi.fn(), getMyTopUps: vi.fn() };
+});
+
 function renderShell(path = '/') {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <MemoryRouter initialEntries={[path]}>
-      <Routes>
-        <Route element={<AppShell theme="dark" toggleTheme={() => undefined} />}>
-          <Route path="/" element={<div>Личный обзор</div>} />
-          <Route path="/admin/users" element={<div>Список пользователей</div>} />
-          <Route path="/admin/tariff-plans" element={<div>Тарифные планы</div>} />
-        </Route>
-      </Routes>
-    </MemoryRouter>,
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={[path]}>
+        <Routes>
+          <Route element={<AppShell theme="dark" toggleTheme={() => undefined} />}>
+            <Route path="/" element={<div>Личный обзор</div>} />
+            <Route path="/admin/users" element={<div>Список пользователей</div>} />
+            <Route path="/admin/tariff-plans" element={<div>Тарифные планы</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 
 describe('AppShell', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(getMyCharges).mockResolvedValue([]);
+    vi.mocked(getMyTopUps).mockResolvedValue([]);
     useUserStore.setState({ user: baseUser, status: 'authenticated' });
   });
 
@@ -43,7 +58,26 @@ describe('AppShell', () => {
     expect(screen.getByRole('menu', { name: 'Меню пользователя' })).toBeInTheDocument();
     expect(screen.getByText('Миша')).toBeInTheDocument();
     expect(screen.queryByText('Участник')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('menuitem').map((item) => item.textContent)).toEqual([
+      'История списаний',
+      'История пополнений',
+      'Сменить пароль',
+      'Выйти',
+    ]);
 
+    await user.click(screen.getByRole('menuitem', { name: 'История списаний' }));
+    expect(await screen.findByRole('dialog', { name: 'История списаний' })).toBeInTheDocument();
+    expect(screen.queryByRole('menu', { name: 'Меню пользователя' })).not.toBeInTheDocument();
+    expect(getMyCharges).toHaveBeenCalledOnce();
+    await user.click(screen.getByRole('button', { name: 'Закрыть' }));
+
+    await user.click(screen.getByRole('button', { name: 'Открыть меню пользователя' }));
+    await user.click(screen.getByRole('menuitem', { name: 'История пополнений' }));
+    expect(await screen.findByRole('dialog', { name: 'История пополнений' })).toBeInTheDocument();
+    expect(getMyTopUps).toHaveBeenCalledOnce();
+    await user.click(screen.getByRole('button', { name: 'Закрыть' }));
+
+    await user.click(screen.getByRole('button', { name: 'Открыть меню пользователя' }));
     await user.click(screen.getByRole('menuitem', { name: 'Сменить пароль' }));
     expect(screen.getByRole('dialog', { name: 'Изменить пароль' })).toBeInTheDocument();
 
