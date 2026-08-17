@@ -88,10 +88,6 @@ class DailyChargeRead(BaseModel):
         return f"{value:.2f}" if value is not None else None
 
 
-class UserTopUpCreate(BaseModel):
-    amount: Annotated[Money, Field(gt=0)]
-
-
 class PasswordChange(BaseModel):
     current_password: str
     new_password: Password

@@ -48,10 +48,6 @@ export interface DailyCharge {
   daily_charge: string | null;
 }
 
-export interface UserTopUpPayload {
-  amount: string;
-}
-
 export interface LoginPayload {
   name: string;
   password: string;

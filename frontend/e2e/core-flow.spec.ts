@@ -1,4 +1,14 @@
+import { createHmac } from 'node:crypto';
+
 import { expect, test } from '@playwright/test';
+
+function signYooMoneyNotification(params: Record<string, string>) {
+  const canonical = Object.entries(params)
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+    .join('&');
+  return createHmac('sha256', 'e2e-notification-secret').update(canonical).digest('hex');
+}
 
 function moscowDateWithOffset(offset: number) {
   const parts = new Intl.DateTimeFormat('en-US', {
@@ -97,8 +107,44 @@ test('administrator manages a user account until deletion', async ({ page }) => 
   await page.getByRole('button', { name: 'Пополнить' }).click();
   const topUpDialog = page.getByRole('dialog', { name: 'Пополнить баланс' });
   await topUpDialog.getByLabel('Сумма пополнения, ₽').fill('25.50');
-  await topUpDialog.getByRole('button', { name: 'Пополнить' }).click();
-  await expect(topUpDialog).toBeHidden();
+  await topUpDialog.getByRole('button', { name: 'Продолжить' }).click();
+  await expect(topUpDialog.getByText(/26[\s\u00a0]*,29/)).toBeVisible();
+  let checkoutBody = '';
+  await page.route('https://yoomoney.ru/quickpay/confirm', async (route) => {
+    checkoutBody = route.request().postData() ?? '';
+    await route.fulfill({ contentType: 'text/html', body: '<h1>YooMoney test checkout</h1>' });
+  });
+  await topUpDialog.getByRole('button', { name: 'Перейти к оплате' }).click();
+  await expect(page.getByRole('heading', { name: 'YooMoney test checkout' })).toBeVisible();
+  const checkout = new URLSearchParams(checkoutBody);
+  expect(checkout.get('label')).toMatch(/^pay_[0-9a-f]{32}$/);
+  const notification: Record<string, string> = {
+    notification_type: 'card-incoming',
+    operation_id: 'e2e-top-up-operation',
+    amount: '25.50',
+    withdraw_amount: '26.29',
+    currency: '643',
+    datetime: new Date().toISOString(),
+    sender: '',
+    codepro: 'false',
+    label: checkout.get('label') ?? '',
+    unaccepted: 'false',
+  };
+  notification.sign = signYooMoneyNotification(notification);
+  const firstWebhook = await page.request.post('/api/payments/yoomoney/webhook', {
+    form: notification,
+  });
+  expect(firstWebhook.ok()).toBe(true);
+  const duplicateWebhook = await page.request.post('/api/payments/yoomoney/webhook', {
+    form: notification,
+  });
+  expect(duplicateWebhook.ok()).toBe(true);
+  const successUrl = checkout.get('successURL');
+  expect(successUrl).toBeTruthy();
+  await page.goto(new URL(successUrl!).pathname);
+  await expect(page.getByRole('heading', { name: 'Баланс пополнен' })).toBeVisible();
+  await expect(page.getByText(/25[\s\u00a0]*,50/)).toBeVisible();
+  await page.getByRole('button', { name: 'Вернуться на главную' }).click();
   await expect(page.getByRole('region', { name: 'Статус участия и баланс' })).toContainText(/25[\s\u00a0]*,50/);
 
   await page.getByRole('button', { name: 'Открыть меню пользователя' }).click();
@@ -136,6 +182,7 @@ test('administrator manages a user account until deletion', async ({ page }) => 
   await expect(statusHistoryDialog.getByText(`Активировал ${memberName}`)).toBeVisible();
   await statusHistoryDialog.getByRole('button', { name: 'Закрыть' }).click();
 
+  blockedVpnRequests = 0;
   await logout();
   await page.getByLabel('Имя').fill(memberName);
   await page.getByLabel('Пароль', { exact: true }).fill(nextPassword);

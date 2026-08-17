@@ -8,6 +8,7 @@ from app.auth import models as auth_models  # noqa: F401
 from app.billing import models as billing_models  # noqa: F401
 from app.config import get_settings
 from app.db import Base
+from app.payments.yoomoney import models as yoomoney_models  # noqa: F401
 from app.tariff_plans import models as tariff_plan_models  # noqa: F401
 from app.users import models  # noqa: F401
 

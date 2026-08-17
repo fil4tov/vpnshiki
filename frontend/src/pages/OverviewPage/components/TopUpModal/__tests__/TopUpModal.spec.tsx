@@ -1,72 +1,88 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
 
-import { topUpMyBalance, useUserStore } from '#entities/user';
+import { createYooMoneyPayment, type YooMoneyPayment } from '#entities/payment';
 import { ApiError } from '#shared/api';
 
 import { TopUpModal } from '../TopUpModal';
+import { submitCheckoutForm } from '../utils';
 
-const user = {
-  id: 'one', name: 'Миша', balance: '10.00', negative_balance_limit: '200.00',
-  role: 'user' as const, account_status: 'active' as const,
-  created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-};
-
-vi.mock('#entities/user', async () => {
-  const actual = await vi.importActual<typeof import('#entities/user')>('#entities/user');
-  return { ...actual, topUpMyBalance: vi.fn() };
+vi.mock('#entities/payment', async () => {
+  const actual = await vi.importActual<typeof import('#entities/payment')>('#entities/payment');
+  return { ...actual, createYooMoneyPayment: vi.fn() };
 });
 
-function renderModal(onClose: () => void) {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <QueryClientProvider client={queryClient}>
-      <TopUpModal open onClose={onClose} />
-    </QueryClientProvider>,
-  );
-}
+vi.mock('../utils', () => ({ submitCheckoutForm: vi.fn() }));
+
+const payment: YooMoneyPayment = {
+  id: 'payment-one',
+  status: 'pending',
+  payment_type: 'PC',
+  credit_amount: '100.00',
+  payable_amount: '101.00',
+  received_amount: null,
+  review_reason: null,
+  created_at: new Date().toISOString(),
+  paid_at: null,
+  checkout: {
+    action: 'https://yoomoney.ru/quickpay/confirm',
+    method: 'POST',
+    fields: { label: 'pay_123', sum: '101.00' },
+  },
+};
 
 describe('TopUpModal', () => {
   beforeEach(() => {
-    useUserStore.setState({ user, status: 'authenticated' });
-    vi.mocked(topUpMyBalance).mockReset();
+    vi.clearAllMocks();
+    vi.mocked(createYooMoneyPayment).mockResolvedValue(payment);
   });
 
-  it('validates and submits a positive amount', async () => {
-    const onClose = vi.fn();
-    const updatedUser = { ...user, balance: '35.50' };
-    vi.mocked(topUpMyBalance).mockResolvedValue(updatedUser);
-    renderModal(onClose);
+  it('creates a payment, shows the authoritative summary and submits checkout', async () => {
+    render(<TopUpModal open onClose={() => undefined} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Пополнить' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Продолжить' }));
     expect(await screen.findByText('Введите сумму пополнения')).toBeInTheDocument();
-    expect(topUpMyBalance).not.toHaveBeenCalled();
-
-    fireEvent.change(screen.getByLabelText('Сумма пополнения, ₽'), {
-      target: { value: '25.50' },
-    });
-    fireEvent.click(screen.getByRole('button', { name: 'Пополнить' }));
-
-    await waitFor(() => expect(topUpMyBalance).toHaveBeenCalledWith({ amount: '25.50' }));
-    expect(useUserStore.getState().user).toEqual(updatedUser);
-    expect(onClose).toHaveBeenCalledOnce();
-  });
-
-  it('shows an amount error returned by the API', async () => {
-    vi.mocked(topUpMyBalance).mockRejectedValue(new ApiError({
-      code: 'balance_overflow',
-      message: 'Сумма пополнения слишком велика',
-      status: 400,
-      fieldErrors: { amount: 'Итоговый баланс превышает допустимое значение' },
-    }));
-    renderModal(() => undefined);
 
     fireEvent.change(screen.getByLabelText('Сумма пополнения, ₽'), {
       target: { value: '100' },
     });
-    fireEvent.click(screen.getByRole('button', { name: 'Пополнить' }));
+    fireEvent.click(screen.getByLabelText('Кошелёк YooMoney'));
+    fireEvent.click(screen.getByRole('button', { name: 'Продолжить' }));
 
-    expect(await screen.findByText('Итоговый баланс превышает допустимое значение')).toBeInTheDocument();
+    await waitFor(() => expect(createYooMoneyPayment).toHaveBeenCalledWith({
+      amount: '100',
+      payment_type: 'PC',
+    }));
+    expect(screen.getByText('На баланс')).toBeInTheDocument();
+    expect(screen.getByText(/100,00/)).toBeInTheDocument();
+    expect(screen.getByText(/101,00/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Перейти к оплате' }));
+    expect(submitCheckoutForm).toHaveBeenCalledWith(payment.checkout);
+  });
+
+  it('validates the configured amount range', async () => {
+    render(<TopUpModal open onClose={() => undefined} />);
+    fireEvent.change(screen.getByLabelText('Сумма пополнения, ₽'), {
+      target: { value: '9.99' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Продолжить' }));
+    expect(await screen.findByText('Минимальная сумма — 10 ₽')).toBeInTheDocument();
+    expect(createYooMoneyPayment).not.toHaveBeenCalled();
+  });
+
+  it('shows an amount error returned by the API', async () => {
+    vi.mocked(createYooMoneyPayment).mockRejectedValue(new ApiError({
+      code: 'validation_error',
+      message: 'Проверьте заполненные поля',
+      status: 422,
+      fieldErrors: { amount: 'Некорректная сумма пополнения' },
+    }));
+    render(<TopUpModal open onClose={() => undefined} />);
+    fireEvent.change(screen.getByLabelText('Сумма пополнения, ₽'), {
+      target: { value: '100' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Продолжить' }));
+    expect(await screen.findByText('Некорректная сумма пополнения')).toBeInTheDocument();
   });
 });

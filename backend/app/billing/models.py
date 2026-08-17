@@ -43,6 +43,12 @@ class UserTopUp(Base):
     user_id: Mapped[UUID] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
     )
+    yoomoney_payment_id: Mapped[UUID | None] = mapped_column(
+        Uuid(as_uuid=True),
+        ForeignKey("yoomoney_payments.id", ondelete="RESTRICT"),
+        nullable=True,
+        unique=True,
+    )
     amount: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
     balance_before: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
     balance_after: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)

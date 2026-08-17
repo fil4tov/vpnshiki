@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -21,6 +21,48 @@ class Settings(BaseSettings):
         default="https://85.208.87.191:8888/gatewaysubru",
         validation_alias="X_UI_SUBSCRIPTION_URL",
     )
+    yoomoney_enabled: bool = False
+    yoomoney_receiver: str | None = None
+    yoomoney_notification_secret: SecretStr | None = None
+    yoomoney_access_token: SecretStr | None = None
+    yoomoney_reconciliation_enabled: bool = True
+    public_app_url: str | None = None
+
+    @model_validator(mode="after")
+    def validate_yoomoney(self) -> "Settings":
+        if not self.yoomoney_enabled:
+            return self
+        notification_secret = (
+            self.yoomoney_notification_secret.get_secret_value()
+            if self.yoomoney_notification_secret is not None
+            else ""
+        )
+        access_token = (
+            self.yoomoney_access_token.get_secret_value()
+            if self.yoomoney_access_token is not None
+            else ""
+        )
+        missing = [
+            name
+            for name, value in (
+                ("YOOMONEY_RECEIVER", self.yoomoney_receiver),
+                ("YOOMONEY_NOTIFICATION_SECRET", notification_secret),
+                ("PUBLIC_APP_URL", self.public_app_url),
+            )
+            if not value
+        ]
+        if self.yoomoney_reconciliation_enabled and not access_token:
+            missing.append("YOOMONEY_ACCESS_TOKEN")
+        if missing:
+            raise ValueError(f"Не заданы настройки YooMoney: {', '.join(missing)}")
+        if self.yoomoney_receiver is None or not self.yoomoney_receiver.isdigit():
+            raise ValueError("YOOMONEY_RECEIVER должен содержать только цифры")
+        if not 11 <= len(self.yoomoney_receiver) <= 20:
+            raise ValueError("YOOMONEY_RECEIVER должен содержать от 11 до 20 цифр")
+        if self.public_app_url is None or not self.public_app_url.startswith("https://"):
+            raise ValueError("PUBLIC_APP_URL должен быть публичным HTTPS-адресом")
+        self.public_app_url = self.public_app_url.rstrip("/")
+        return self
 
 
 @lru_cache

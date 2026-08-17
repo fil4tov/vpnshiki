@@ -16,6 +16,8 @@ from app.bootstrap import ensure_admin
 from app.config import get_settings
 from app.db import SessionFactory
 from app.errors import ApiError
+from app.payments.yoomoney import router as yoomoney_router
+from app.payments.yoomoney.scheduler import YooMoneyReconciliationScheduler
 from app.tariff_plans import router as tariff_plans_router
 from app.users.router import router as users_router
 from app.vpn_access import router as vpn_access_router
@@ -29,10 +31,13 @@ async def lifespan(_app: FastAPI):
     async with SessionFactory() as db:
         await ensure_admin(db, settings)
     scheduler = BillingScheduler(SessionFactory, settings)
+    payment_scheduler = YooMoneyReconciliationScheduler(SessionFactory, settings)
     scheduler.start()
+    payment_scheduler.start()
     try:
         yield
     finally:
+        await payment_scheduler.stop()
         await scheduler.stop()
 
 
@@ -48,6 +53,7 @@ app.include_router(users_router)
 app.include_router(admin_router)
 app.include_router(tariff_plans_router)
 app.include_router(vpn_access_router)
+app.include_router(yoomoney_router)
 
 
 @app.get("/api/openapi.json", include_in_schema=False)

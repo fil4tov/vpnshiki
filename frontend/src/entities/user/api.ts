@@ -10,7 +10,6 @@ import type {
   UserCharge,
   UserStatusHistory,
   UserTopUp,
-  UserTopUpPayload,
 } from './types';
 
 export const adminUsersKey = ['users'] as const;
@@ -28,10 +27,6 @@ export const getMyDailyCharge = () => apiRequest<DailyCharge>('users/me/daily-ch
 export const getMyCharges = () => apiRequest<UserCharge[]>('users/me/charges');
 export const getMyTopUps = () => apiRequest<UserTopUp[]>('users/me/top-ups');
 export const activateMyAccount = () => apiRequest<User>('users/me/activation', { method: 'post' });
-export const topUpMyBalance = (payload: UserTopUpPayload) => apiRequest<User>(
-  'users/me/top-ups',
-  { method: 'post', json: payload },
-);
 export const changeMyPassword = (currentPassword: string, newPassword: string) => apiRequest<User>(
   'users/me/password',
   { method: 'post', json: { current_password: currentPassword, new_password: newPassword } },

@@ -33,6 +33,25 @@ docker compose up --build -d
 профиль `web-moxxie2-pc` не относится к пользователю `moxxie`. Старый формат
 `[web]-<логин>` не поддерживается.
 
+## Пополнение через YooMoney
+
+Пополнение баланса работает через форму сбора денег YooMoney. Backend создаёт платёж,
+а баланс меняется только после подписанного HTTP-уведомления или сверки истории операций.
+Для включения задайте в `.env`:
+
+```dotenv
+YOOMONEY_ENABLED=true
+YOOMONEY_RECEIVER=номер_именного_кошелька
+YOOMONEY_NOTIFICATION_SECRET=секрет_HTTP_уведомлений
+YOOMONEY_ACCESS_TOKEN=токен_с_правом_operation-history
+YOOMONEY_RECONCILIATION_ENABLED=true
+PUBLIC_APP_URL=https://публичный-домен-приложения
+```
+
+В настройках кошелька укажите HTTPS-адрес уведомлений
+`https://публичный-домен-приложения/api/payments/yoomoney/webhook`. Номер кошелька,
+секрет уведомлений и access token нельзя добавлять в репозиторий или frontend.
+
 ## Локальная разработка
 
 ```bash

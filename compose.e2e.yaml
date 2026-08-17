@@ -15,6 +15,11 @@ services:
       X_UI_API_URL: http://mock-xui:9084/panel/api
       X_UI_TOKEN: e2e-provider-token
       X_UI_SUBSCRIPTION_URL: https://subscription.example.test/gatewaysubru
+      YOOMONEY_ENABLED: "true"
+      YOOMONEY_RECEIVER: "41001123456789"
+      YOOMONEY_NOTIFICATION_SECRET: e2e-notification-secret
+      YOOMONEY_RECONCILIATION_ENABLED: "false"
+      PUBLIC_APP_URL: https://e2e.example.test
     depends_on:
       mock-xui:
         condition: service_healthy
