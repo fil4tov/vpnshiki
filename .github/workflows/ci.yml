@@ -48,7 +48,7 @@ jobs:
 
       - name: Install Playwright browser
         working-directory: frontend
-        run: pnpm exec playwright install --with-deps chrome
+        run: pnpm exec playwright install --with-deps chromium
 
       - name: E2E tests
         working-directory: frontend
