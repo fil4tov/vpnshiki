@@ -8,6 +8,7 @@ from app.auth.dependencies import CurrentUser, Database
 from app.auth.security import hash_password, verify_password
 from app.auth.service import replace_all_sessions
 from app.billing.models import StatusChangeSource, UserTopUp
+from app.billing.scheduler import request_vpn_sync_processing
 from app.billing.service import queue_vpn_sync, reactivate_if_billing_blocked, record_status_change
 from app.config import get_settings
 from app.errors import ApiError
@@ -55,6 +56,7 @@ async def activate_account(user: CurrentUser, db: Database) -> UserRead:
     )
     await queue_vpn_sync(db, stored_user.id, True)
     await db.commit()
+    request_vpn_sync_processing()
     await db.refresh(stored_user)
     return UserRead.model_validate(stored_user)
 

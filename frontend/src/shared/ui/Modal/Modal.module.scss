@@ -2,7 +2,7 @@
 .modal { width: min(100%, 540px); max-height: calc(100vh - 40px); overflow: auto; padding: 22px; background: var(--surface-strong); border: 1px solid var(--border-strong); border-radius: 22px; box-shadow: var(--shadow); }
 .header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
 .headerCopy { min-width: 0; }
-.header h2 { margin: 0; font-size: clamp(1.4rem, 4vw, 1.65rem); line-height: 1.15; letter-spacing: -.035em; }
+.header h2 { margin: 0; font-size: clamp(2rem, 6vw, 2.5rem); line-height: 1.08; letter-spacing: -.04em; }
 .description { margin: 7px 0 0; color: var(--text-muted); font-size: .78rem; line-height: 1.45; }
 .close { display: grid; width: 38px; height: 38px; place-items: center; color: var(--text-muted); cursor: pointer; background: var(--surface-muted); border: 1px solid var(--border); border-radius: 11px; transition: color 160ms ease, border-color 160ms ease, background 160ms ease; align-self: flex-start }
 .close:hover { color: var(--text); background: var(--accent-soft); border-color: var(--border-strong); }

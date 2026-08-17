@@ -110,7 +110,14 @@ export function ChargeHistoryModal({ user, onClose }: { user: AdminUser; onClose
           <p>У пользователя пока не было списаний.</p>
         </div>
       ) : (
-        <MonthlyHistory groups={groups} />
+        <MonthlyHistory
+          groups={groups}
+          columnLabels={{
+            date: 'Дата',
+            description: 'Тарифный план',
+            amount: 'Сумма',
+          }}
+        />
       )}
     </Modal>
   );

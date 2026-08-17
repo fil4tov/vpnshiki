@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 
@@ -51,6 +51,12 @@ describe('ChargeHistoryModal', () => {
     const userName = screen.getByText('moxxie');
     expect(title.compareDocumentPosition(userName) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByText('96,78 ₽')).toBeInTheDocument();
+    const headers = ['Дата', 'Тарифный план', 'Сумма'];
+    const firstHeader = screen.getByText(headers[0]).parentElement;
+    expect(firstHeader).not.toBeNull();
+    expect(within(firstHeader as HTMLElement).getAllByText(/.+/).map((cell) => cell.textContent)).toEqual(
+      headers,
+    );
     expect(screen.queryByText('TP_01.07.2026')).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /Июль 2026/i }));

@@ -19,10 +19,18 @@ import {
   ChargeHistoryModal,
   DeleteUserConfirmation,
   ResetPasswordForm,
+  SortableColumnHeader,
   StatusHistoryModal,
   UserForm,
 } from './components';
+import type { SortDirection } from './components';
 import styles from './UsersPage.module.scss';
+
+const accountStatusView = {
+  active: { label: 'Активен', tone: 'positive' },
+  paused: { label: 'Приостановлен', tone: 'warning' },
+  blocked: { label: 'Заблокирован', tone: 'danger' },
+} as const;
 
 const vpnStatusView = {
   online: { label: 'В сети', tone: 'positive' },
@@ -30,12 +38,51 @@ const vpnStatusView = {
   unknown: { label: 'Неизвестно', tone: 'warning' },
 } as const;
 
+type UserSortKey =
+  | 'name'
+  | 'accountStatus'
+  | 'vpnStatus'
+  | 'balance'
+  | 'negativeBalanceLimit'
+  | 'totalCharged';
+
+interface UserSort {
+  key: UserSortKey;
+  direction: Exclude<SortDirection, 'none'>;
+}
+
+const userCollator = new Intl.Collator('ru', { numeric: true, sensitivity: 'base' });
+
+function compareUsers(left: AdminUser, right: AdminUser, key: UserSortKey) {
+  switch (key) {
+    case 'name':
+      return userCollator.compare(left.name, right.name);
+    case 'accountStatus':
+      return userCollator.compare(
+        accountStatusView[left.account_status].label,
+        accountStatusView[right.account_status].label,
+      );
+    case 'vpnStatus':
+      return userCollator.compare(
+        vpnStatusView[left.vpnStatus].label,
+        vpnStatusView[right.vpnStatus].label,
+      );
+    case 'balance':
+      return Number(left.balance) - Number(right.balance);
+    case 'negativeBalanceLimit':
+      return Number(left.negative_balance_limit) - Number(right.negative_balance_limit);
+    case 'totalCharged':
+      return Number(left.total_charged) - Number(right.total_charged);
+  }
+}
+
 export function UsersPage() {
   const currentUser = useUserStore((state) => state.user)!;
   const setCurrentUser = useUserStore((state) => state.setUser);
   const logout = useUserStore((state) => state.logout);
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
+  const [sort, setSort] = useState<UserSort | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
   const [resetting, setResetting] = useState<User | null>(null);
@@ -57,8 +104,17 @@ export function UsersPage() {
 
   const users = useMemo(() => {
     const value = search.trim().toLowerCase();
-    return (usersQuery.data ?? []).filter((user) => user.name.toLowerCase().includes(value));
-  }, [search, usersQuery.data]);
+    const filteredUsers = (usersQuery.data ?? []).filter((user) =>
+      user.name.toLowerCase().includes(value),
+    );
+    if (!sort) return filteredUsers;
+    const direction = sort.direction === 'ascending' ? 1 : -1;
+    return [...filteredUsers].sort((left, right) => {
+      const result = compareUsers(left, right, sort.key);
+      if (result !== 0) return result * direction;
+      return userCollator.compare(left.name, right.name);
+    });
+  }, [search, sort, usersQuery.data]);
   const activeCount = (usersQuery.data ?? []).filter((user) => user.account_status === 'active').length;
   const pausedCount = (usersQuery.data ?? []).filter((user) => user.account_status === 'paused').length;
   const blockedCount = (usersQuery.data ?? []).filter((user) => user.account_status === 'blocked').length;
@@ -84,6 +140,15 @@ export function UsersPage() {
     await deleteMutation.mutateAsync(deleting.id);
     setDeleting(null);
   };
+  const toggleSort = (key: UserSortKey) => {
+    setSort((current) => {
+      if (current?.key !== key) return { key, direction: 'descending' };
+      if (current.direction === 'descending') return { key, direction: 'ascending' };
+      return null;
+    });
+  };
+  const sortDirection = (key: UserSortKey): SortDirection =>
+    sort?.key === key ? sort.direction : 'none';
 
   return (
     <div className={styles.page}>
@@ -109,14 +174,23 @@ export function UsersPage() {
         ) : (
           <div className={styles.tableWrap}>
             <table>
-              <thead><tr><th>Пользователь</th><th>Статус</th><th>VPN</th><th>Баланс</th><th>Лимит</th><th>Всего списаний</th><th><span className={styles.srOnly}>Действия</span></th></tr></thead>
+              <thead><tr>
+                <SortableColumnHeader label="Пользователь" direction={sortDirection('name')} onSort={() => toggleSort('name')} />
+                <SortableColumnHeader label="Статус" direction={sortDirection('accountStatus')} onSort={() => toggleSort('accountStatus')} />
+                <SortableColumnHeader label="VPN" direction={sortDirection('vpnStatus')} onSort={() => toggleSort('vpnStatus')} />
+                <SortableColumnHeader label="Баланс" direction={sortDirection('balance')} onSort={() => toggleSort('balance')} />
+                <SortableColumnHeader label="Лимит" direction={sortDirection('negativeBalanceLimit')} onSort={() => toggleSort('negativeBalanceLimit')} />
+                <SortableColumnHeader label="Всего списаний" direction={sortDirection('totalCharged')} onSort={() => toggleSort('totalCharged')} />
+                <th><span className={styles.srOnly}>Действия</span></th>
+              </tr></thead>
               <tbody>{users.map((user) => {
                 const vpnView = vpnStatusView[user.vpnStatus];
+                const accountView = accountStatusView[user.account_status];
                 return <tr key={user.id}>
                   <td data-label="Пользователь"><div className={styles.person}><span>{user.name.slice(0, 1).toUpperCase()}</span><div><strong>{user.name}</strong><small>{user.role === 'admin' ? 'Администратор' : 'Участник'}</small></div></div></td>
                   <td data-label="Статус">
                     <div className={styles.statusValue}>
-                      <Badge tone={user.account_status === 'blocked' ? 'danger' : user.account_status === 'active' ? 'positive' : 'warning'}>{user.account_status === 'blocked' ? 'Заблокирован' : user.account_status === 'active' ? 'Активен' : 'Приостановлен'}</Badge>
+                      <Badge tone={accountView.tone}>{accountView.label}</Badge>
                       <TableActionButton
                         className={styles.historyButton}
                         title="История статуса"

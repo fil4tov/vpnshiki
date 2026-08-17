@@ -237,7 +237,7 @@ async def test_daily_charge_uses_current_plan_and_active_users(
         f"/api/admin/users/{admin.id}",
         json={"account_status": "paused"},
     )
-    assert provider.updates == [("web-admin", False)]
+    assert provider.updates == []
     paused_response = await client.get("/api/users/me/daily-charge")
     assert paused_response.json() == {"daily_charge": "0.00"}
 
@@ -277,6 +277,47 @@ async def test_provider_failure_rejects_manual_status_change(
             )
         ).all()
         assert [item.new_status for item in statuses] == [AccountStatus.ACTIVE.value]
+
+
+async def test_pausing_account_does_not_require_vpn_provider(client: AsyncClient) -> None:
+    await login(client)
+    created = await client.post(
+        "/api/admin/users",
+        json={"name": "Отложенная пауза", "password": "user-password"},
+    )
+    user_id = UUID(created.json()["id"])
+    app.dependency_overrides[get_xui_client] = lambda: FailingStatusXuiClient()
+
+    response = await client.patch(
+        f"/api/admin/users/{user_id}",
+        json={"account_status": "paused"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["account_status"] == AccountStatus.PAUSED.value
+
+
+async def test_reactivating_paused_account_enables_vpn_immediately(client: AsyncClient) -> None:
+    provider = FakeStatusXuiClient()
+    app.dependency_overrides[get_xui_client] = lambda: provider
+    await login(client)
+    created = await client.post(
+        "/api/admin/users",
+        json={
+            "name": "Возобновление",
+            "password": "user-password",
+            "account_status": "paused",
+        },
+    )
+    user_id = UUID(created.json()["id"])
+
+    response = await client.patch(
+        f"/api/admin/users/{user_id}",
+        json={"account_status": "active"},
+    )
+
+    assert response.status_code == 200
+    assert provider.updates == [("web-Возобновление", True)]
 
 
 async def test_provider_failure_marks_vpn_status_unknown(client: AsyncClient) -> None:

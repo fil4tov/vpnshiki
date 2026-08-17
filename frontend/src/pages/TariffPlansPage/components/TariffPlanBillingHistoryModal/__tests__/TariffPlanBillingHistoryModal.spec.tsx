@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 
@@ -28,7 +28,7 @@ const plan: TariffPlan = {
 };
 
 describe('TariffPlanBillingHistoryModal', () => {
-  it('shows daily rate and calculation user count grouped by month', async () => {
+  it('shows users, per-user charge, and total daily charge grouped by month', async () => {
     vi.mocked(getTariffPlanBillingHistory).mockResolvedValue([
       { id: 'august', billing_date: '2026-08-16', daily_charge: '32.26', active_users_count: 2 },
       { id: 'july', billing_date: '2026-07-31', daily_charge: '64.52', active_users_count: 1 },
@@ -46,7 +46,15 @@ describe('TariffPlanBillingHistoryModal', () => {
     const planName = screen.getByText('TP_01.08.2026');
     expect(title.compareDocumentPosition(planName) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByText('Списано за всё время')).toBeInTheDocument();
-    expect(screen.getByText('96,78 ₽')).toBeInTheDocument();
+    expect(screen.getByText('129,04 ₽')).toBeInTheDocument();
+    const headers = ['Дата', 'Пользователи', 'Сумма', 'Всего списано'];
+    const firstHeader = screen.getByText(headers[0]).parentElement;
+    expect(firstHeader).not.toBeNull();
+    expect(within(firstHeader as HTMLElement).getAllByText(/.+/).map((cell) => cell.textContent)).toEqual(
+      headers,
+    );
+    expect(screen.getByText('−32,26 ₽')).toBeInTheDocument();
+    expect(screen.getByText('−64,52 ₽')).toBeInTheDocument();
     expect(screen.queryByText('1 пользователь')).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /Июль 2026/i }));

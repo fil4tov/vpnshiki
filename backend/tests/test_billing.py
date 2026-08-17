@@ -1,8 +1,10 @@
+import asyncio
 from datetime import UTC, date, datetime
 from decimal import Decimal
 
 from sqlalchemy import func, select
 
+from app.billing import scheduler as billing_scheduler
 from app.billing.models import (
     BillingRun,
     StatusChangeSource,
@@ -17,9 +19,80 @@ from app.billing.service import (
     process_vpn_sync_jobs,
     sync_paused_profiles,
 )
+from app.config import Settings
 from app.errors import ApiError
 from app.tariff_plans.models import TariffPlan
 from app.users.models import AccountStatus, User
+
+
+async def test_vpn_sync_request_wakes_scheduler_without_polling_delay(
+    session_factory,
+    monkeypatch,
+) -> None:
+    first_cycle = asyncio.Event()
+    requested_cycle = asyncio.Event()
+    cycle_count = 0
+
+    async def process_jobs(*_args: object) -> int:
+        nonlocal cycle_count
+        cycle_count += 1
+        if cycle_count == 1:
+            first_cycle.set()
+        else:
+            requested_cycle.set()
+        return 0
+
+    async def no_op(*_args: object) -> None:
+        return None
+
+    monkeypatch.setattr(billing_scheduler, "process_vpn_sync_jobs", process_jobs)
+    monkeypatch.setattr(billing_scheduler, "catch_up_billing", no_op)
+    monkeypatch.setattr(billing_scheduler, "sync_paused_profiles", no_op)
+    billing_scheduler._vpn_sync_requested.clear()
+    scheduler = billing_scheduler.BillingScheduler(session_factory, Settings())
+    scheduler.start()
+    try:
+        await asyncio.wait_for(first_cycle.wait(), timeout=1)
+        billing_scheduler.request_vpn_sync_processing()
+        await asyncio.wait_for(requested_cycle.wait(), timeout=0.5)
+    finally:
+        await scheduler.stop()
+
+    assert cycle_count >= 2
+
+
+async def test_daily_paused_sync_wakes_vpn_job_processing(
+    session_factory,
+    monkeypatch,
+) -> None:
+    processed_after_daily_sync = asyncio.Event()
+    cycle_count = 0
+
+    async def process_jobs(*_args: object) -> int:
+        nonlocal cycle_count
+        cycle_count += 1
+        if cycle_count >= 2:
+            processed_after_daily_sync.set()
+        return 0
+
+    async def no_op(*_args: object) -> None:
+        return None
+
+    async def queue_paused_profile(*_args: object) -> int:
+        return 1
+
+    monkeypatch.setattr(billing_scheduler, "process_vpn_sync_jobs", process_jobs)
+    monkeypatch.setattr(billing_scheduler, "catch_up_billing", no_op)
+    monkeypatch.setattr(billing_scheduler, "sync_paused_profiles", queue_paused_profile)
+    billing_scheduler._vpn_sync_requested.clear()
+    scheduler = billing_scheduler.BillingScheduler(session_factory, Settings())
+    scheduler.start()
+    try:
+        await asyncio.wait_for(processed_after_daily_sync.wait(), timeout=0.5)
+    finally:
+        await scheduler.stop()
+
+    assert cycle_count >= 2
 
 
 async def test_daily_billing_is_idempotent_and_blocks_below_limit(
@@ -179,7 +252,12 @@ class EventuallyAvailableProvider:
 
 
 class ProfileStateProvider:
+    def __init__(self) -> None:
+        self.calls = 0
+        self.updates: list[tuple[str, bool]] = []
+
     async def list_client_states(self) -> dict[str, bool]:
+        self.calls += 1
         return {
             "web-admin-mobile": True,
             "web-admin-pc": False,
@@ -187,21 +265,92 @@ class ProfileStateProvider:
             "[web]-admin": True,
         }
 
+    async def set_matching_enabled(self, email: str, enabled: bool) -> None:
+        self.updates.append((email, enabled))
+
 
 async def test_paused_profile_sync_queues_one_job_when_any_matching_profile_is_enabled(
     session_factory, admin
 ) -> None:
+    provider = ProfileStateProvider()
     async with session_factory() as db:
         user = await db.get(User, admin.id)
         assert user is not None
         user.account_status = AccountStatus.PAUSED.value
+        db.add(
+            UserStatusHistory(
+                user_id=user.id,
+                previous_status=AccountStatus.ACTIVE.value,
+                new_status=AccountStatus.PAUSED.value,
+                changed_by_user_id=admin.id,
+                source=StatusChangeSource.ADMIN.value,
+                effective_at=billing_timestamp(date(2026, 8, 15)),
+            )
+        )
         await db.commit()
 
-        await sync_paused_profiles(db, ProfileStateProvider())
+        queued = await sync_paused_profiles(db, provider, date(2026, 8, 16))
 
         job = await db.scalar(select(VpnSyncJob).where(VpnSyncJob.user_id == user.id))
+        assert queued == 1
+        assert provider.calls == 1
         assert job is not None
         assert job.desired_enabled is False
+
+    assert await process_vpn_sync_jobs(session_factory, provider) == 1
+    assert provider.updates == [("web-admin", False)]
+    async with session_factory() as db:
+        assert await db.scalar(
+            select(VpnSyncJob).where(VpnSyncJob.user_id == admin.id)
+        ) is None
+
+
+async def test_paused_profile_sync_waits_until_next_moscow_day(
+    session_factory, admin
+) -> None:
+    pause_day = date(2026, 8, 16)
+    async with session_factory() as db:
+        user = await db.get(User, admin.id)
+        assert user is not None
+        user.account_status = AccountStatus.PAUSED.value
+        db.add_all(
+            [
+                UserStatusHistory(
+                    user_id=user.id,
+                    previous_status=AccountStatus.ACTIVE.value,
+                    new_status=AccountStatus.PAUSED.value,
+                    changed_by_user_id=admin.id,
+                    source=StatusChangeSource.ADMIN.value,
+                    effective_at=billing_timestamp(date(2026, 8, 14)),
+                ),
+                UserStatusHistory(
+                    user_id=user.id,
+                    previous_status=AccountStatus.PAUSED.value,
+                    new_status=AccountStatus.ACTIVE.value,
+                    changed_by_user_id=admin.id,
+                    source=StatusChangeSource.ADMIN.value,
+                    effective_at=billing_timestamp(date(2026, 8, 15)),
+                ),
+                UserStatusHistory(
+                    user_id=user.id,
+                    previous_status=AccountStatus.ACTIVE.value,
+                    new_status=AccountStatus.PAUSED.value,
+                    changed_by_user_id=admin.id,
+                    source=StatusChangeSource.ADMIN.value,
+                    effective_at=billing_timestamp(pause_day),
+                ),
+            ]
+        )
+        await db.commit()
+
+        provider = ProfileStateProvider()
+        queued = await sync_paused_profiles(db, provider, pause_day)
+
+        assert queued == 0
+        assert provider.calls == 0
+        assert await db.scalar(
+            select(VpnSyncJob).where(VpnSyncJob.user_id == user.id)
+        ) is None
 
 
 async def test_automatic_vpn_failure_remains_queued_for_retry(

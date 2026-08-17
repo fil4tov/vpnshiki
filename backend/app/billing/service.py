@@ -7,6 +7,7 @@ from zoneinfo import ZoneInfo
 
 from sqlalchemy import func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
+from sqlalchemy.orm import aliased
 
 from app.errors import ApiError
 from app.tariff_plans.models import TariffPlan
@@ -376,27 +377,45 @@ async def catch_up_billing(db: AsyncSession, through_date: date | None = None) -
 
 
 async def sync_paused_profiles(
-    db: AsyncSession, provider: XuiClient
-) -> None:
+    db: AsyncSession,
+    provider: XuiClient,
+    through_date: date | None = None,
+) -> int:
+    latest_status = aliased(UserStatusHistory)
+    latest_status_id = (
+        select(latest_status.id)
+        .where(latest_status.user_id == User.id)
+        .order_by(latest_status.effective_at.desc(), latest_status.created_at.desc())
+        .limit(1)
+        .correlate(User)
+        .scalar_subquery()
+    )
+    current_status = aliased(UserStatusHistory)
+    pause_cutoff = billing_timestamp(through_date or moscow_today())
     paused_users = list(
         (
             await db.scalars(
-                select(User).where(
+                select(User)
+                .join(current_status, current_status.id == latest_status_id)
+                .where(
                     User.account_status == AccountStatus.PAUSED.value,
                     User.deleted_at.is_(None),
+                    current_status.new_status == AccountStatus.PAUSED.value,
+                    current_status.effective_at < pause_cutoff,
                 )
             )
         ).all()
     )
     if not paused_users:
-        return
+        return 0
     try:
         states = await provider.list_client_states()
     except ApiError:
         for user in paused_users:
             await queue_vpn_sync(db, user.id, False)
         await db.commit()
-        return
+        return len(paused_users)
+    queued = 0
     for user in paused_users:
         prefix = profile_email(user)
         if any(
@@ -404,7 +423,9 @@ async def sync_paused_profiles(
             for email, enabled in states.items()
         ):
             await queue_vpn_sync(db, user.id, False)
+            queued += 1
     await db.commit()
+    return queued
 
 
 async def process_vpn_sync_jobs(

@@ -64,7 +64,15 @@ async def test_activation_requires_authentication(client: AsyncClient) -> None:
 async def test_paused_user_activates_at_exact_balance_limit(
     client: AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
+    sync_requests = 0
+
+    def request_vpn_sync() -> None:
+        nonlocal sync_requests
+        sync_requests += 1
+
+    monkeypatch.setattr("app.users.router.request_vpn_sync_processing", request_vpn_sync)
     user_id = await _create_user(
         session_factory,
         name="Самоактивация",
@@ -77,6 +85,7 @@ async def test_paused_user_activates_at_exact_balance_limit(
 
     assert response.status_code == 200
     assert response.json()["account_status"] == AccountStatus.ACTIVE.value
+    assert sync_requests == 1
     async with session_factory() as db:
         user = await db.get(User, user_id)
         assert user is not None

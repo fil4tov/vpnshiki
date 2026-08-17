@@ -40,6 +40,10 @@ function pluralize(value: number, one: string, few: string, many: string) {
   return `${value} ${many}`;
 }
 
+function totalChargeInCents(run: TariffPlanBillingRun) {
+  return Math.round(Number(run.daily_charge) * 100) * run.active_users_count;
+}
+
 function groupRuns(runs: TariffPlanBillingRun[]): MonthlyHistoryGroup[] {
   const groups = new Map<string, TariffPlanBillingRun[]>();
   runs.forEach((run) => {
@@ -48,7 +52,7 @@ function groupRuns(runs: TariffPlanBillingRun[]): MonthlyHistoryGroup[] {
   });
   return Array.from(groups, ([key, monthRuns]) => {
     const totalInCents = monthRuns.reduce(
-      (total, run) => total + Math.round(Number(run.daily_charge) * 100),
+      (total, run) => total + totalChargeInCents(run),
       0,
     );
     return {
@@ -69,6 +73,7 @@ function groupRuns(runs: TariffPlanBillingRun[]): MonthlyHistoryGroup[] {
           'пользователей',
         ),
         amount: `−${formatMoney(run.daily_charge)}`,
+        totalAmount: `−${formatMoney((totalChargeInCents(run) / 100).toFixed(2))}`,
       })),
     };
   });
@@ -87,7 +92,7 @@ export function TariffPlanBillingHistoryModal({
   });
   const groups = useMemo(() => groupRuns(historyQuery.data ?? []), [historyQuery.data]);
   const totalInCents = (historyQuery.data ?? []).reduce(
-    (total, run) => total + Math.round(Number(run.daily_charge) * 100),
+    (total, run) => total + totalChargeInCents(run),
     0,
   );
 
@@ -123,7 +128,15 @@ export function TariffPlanBillingHistoryModal({
           <p>По тарифному плану пока не было списаний.</p>
         </div>
       ) : (
-        <MonthlyHistory groups={groups} />
+        <MonthlyHistory
+          groups={groups}
+          columnLabels={{
+            date: 'Дата',
+            description: 'Пользователи',
+            amount: 'Сумма',
+            totalAmount: 'Всего списано',
+          }}
+        />
       )}
     </Modal>
   );

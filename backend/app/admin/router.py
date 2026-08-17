@@ -230,9 +230,10 @@ async def update_user(
             )
     target_status = changes.pop("account_status", None)
     if target_status is not None and target_status.value != user.account_status:
-        await provider.set_matching_enabled(
-            profile_email(user), target_status == AccountStatus.ACTIVE
-        )
+        if target_status != AccountStatus.PAUSED:
+            await provider.set_matching_enabled(
+                profile_email(user), target_status == AccountStatus.ACTIVE
+            )
         await record_status_change(
             db,
             user,

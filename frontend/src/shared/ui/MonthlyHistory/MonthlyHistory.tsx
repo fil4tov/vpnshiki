@@ -9,6 +9,7 @@ export interface MonthlyHistoryRow {
   dateLabel: string;
   description: string;
   amount: string;
+  totalAmount?: string;
 }
 
 export interface MonthlyHistoryGroup {
@@ -19,7 +20,20 @@ export interface MonthlyHistoryGroup {
   rows: MonthlyHistoryRow[];
 }
 
-export function MonthlyHistory({ groups }: { groups: MonthlyHistoryGroup[] }) {
+interface MonthlyHistoryColumnLabels {
+  date: string;
+  description: string;
+  amount: string;
+  totalAmount?: string;
+}
+
+export function MonthlyHistory({
+  groups,
+  columnLabels,
+}: {
+  groups: MonthlyHistoryGroup[];
+  columnLabels?: MonthlyHistoryColumnLabels;
+}) {
   const [openGroup, setOpenGroup] = useState<string | null>();
   const expandedGroup = openGroup === undefined ? groups[0]?.key : openGroup;
 
@@ -49,11 +63,27 @@ export function MonthlyHistory({ groups }: { groups: MonthlyHistoryGroup[] }) {
             </button>
             {expanded && (
               <div id={panelId} className={styles.rows}>
+                {columnLabels && (
+                  <div
+                    className={`${styles.row} ${styles.columnHeader} ${columnLabels.totalAmount ? styles.rowWithTotal : ''}`}
+                  >
+                    <span>{columnLabels.date}</span>
+                    <span>{columnLabels.description}</span>
+                    <span>{columnLabels.amount}</span>
+                    {columnLabels.totalAmount && <span>{columnLabels.totalAmount}</span>}
+                  </div>
+                )}
                 {group.rows.map((row) => (
-                  <div key={row.id} className={styles.row}>
+                  <div
+                    key={row.id}
+                    className={`${styles.row} ${row.totalAmount ? styles.rowWithTotal : ''}`}
+                  >
                     <time dateTime={row.dateTime}>{row.dateLabel}</time>
                     <span title={row.description}>{row.description}</span>
-                    <strong>{row.amount}</strong>
+                    <strong data-label={columnLabels?.amount}>{row.amount}</strong>
+                    {row.totalAmount && (
+                      <strong data-label={columnLabels?.totalAmount}>{row.totalAmount}</strong>
+                    )}
                   </div>
                 ))}
               </div>

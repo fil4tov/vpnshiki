@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 
 import { getUsers, useUserStore } from '#entities/user';
@@ -15,18 +16,18 @@ vi.mock('#entities/user', async () => {
 const createdAt = '2026-08-16T00:00:00Z';
 const users: AdminUser[] = [
   {
-    id: 'online', name: 'online-user', role: 'user', account_status: 'active',
-    balance: '0.00', negative_balance_limit: '500.00', total_charged: '10.00',
+    id: 'online', name: 'online-user', role: 'user', account_status: 'paused',
+    balance: '-10.00', negative_balance_limit: '500.00', total_charged: '10.00',
     vpnStatus: 'online', created_at: createdAt, updated_at: createdAt,
   },
   {
-    id: 'offline', name: 'offline-user', role: 'user', account_status: 'active',
-    balance: '0.00', negative_balance_limit: '500.00', total_charged: '10.00',
+    id: 'offline', name: 'offline-user', role: 'user', account_status: 'blocked',
+    balance: '100.00', negative_balance_limit: '100.00', total_charged: '30.00',
     vpnStatus: 'offline', created_at: createdAt, updated_at: createdAt,
   },
   {
     id: 'unknown', name: 'unknown-user', role: 'user', account_status: 'active',
-    balance: '0.00', negative_balance_limit: '500.00', total_charged: '10.00',
+    balance: '0.00', negative_balance_limit: '1000.00', total_charged: '20.00',
     vpnStatus: 'unknown', created_at: createdAt, updated_at: createdAt,
   },
 ];
@@ -73,5 +74,54 @@ describe('UsersPage', () => {
       .toBeInTheDocument();
     expect(within(screen.getByText('unknown-user').closest('tr')!).getByText('Неизвестно'))
       .toBeInTheDocument();
+  });
+
+  it('sorts users by every data column and toggles the direction', async () => {
+    vi.mocked(getUsers).mockResolvedValue(users);
+    useUserStore.setState({
+      user: {
+        id: 'admin', name: 'admin', role: 'admin', account_status: 'active',
+        balance: '0.00', negative_balance_limit: '500.00',
+        created_at: createdAt, updated_at: createdAt,
+      },
+      status: 'authenticated',
+    });
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const user = userEvent.setup();
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <UsersPage />
+      </QueryClientProvider>,
+    );
+
+    await screen.findByText('online-user');
+    const rowNames = () => screen.getAllByRole('row').slice(1).map((row) =>
+      within(row).getByText(/^(online|offline|unknown)-user$/).textContent,
+    );
+    const descendingOrders: Array<[string, string[]]> = [
+      ['Пользователь', ['unknown-user', 'online-user', 'offline-user']],
+      ['Статус', ['online-user', 'offline-user', 'unknown-user']],
+      ['VPN', ['unknown-user', 'offline-user', 'online-user']],
+      ['Баланс', ['offline-user', 'unknown-user', 'online-user']],
+      ['Лимит', ['unknown-user', 'online-user', 'offline-user']],
+      ['Всего списаний', ['offline-user', 'unknown-user', 'online-user']],
+    ];
+
+    for (const [label, order] of descendingOrders) {
+      const sortButton = screen.getByRole('button', { name: label });
+      await user.click(sortButton);
+      expect(sortButton.closest('th')).toHaveAttribute('aria-sort', 'descending');
+      expect(rowNames()).toEqual(order);
+    }
+
+    const totalChargedSort = screen.getByRole('button', { name: 'Всего списаний' });
+    await user.click(totalChargedSort);
+    expect(totalChargedSort.closest('th')).toHaveAttribute('aria-sort', 'ascending');
+    expect(rowNames()).toEqual(['online-user', 'unknown-user', 'offline-user']);
+
+    await user.click(totalChargedSort);
+    expect(totalChargedSort.closest('th')).toHaveAttribute('aria-sort', 'none');
+    expect(rowNames()).toEqual(['online-user', 'offline-user', 'unknown-user']);
   });
 });
