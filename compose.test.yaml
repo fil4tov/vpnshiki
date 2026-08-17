@@ -1,0 +1,32 @@
+services:
+  postgres-test:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: vpnshiki_test
+      POSTGRES_USER: vpnshiki_test
+      POSTGRES_PASSWORD: vpnshiki_test_password
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vpnshiki_test -d vpnshiki_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 15
+
+  backend-test:
+    build:
+      context: ./backend
+      target: test
+    environment:
+      DATABASE_URL: postgresql+asyncpg://vpnshiki_test:vpnshiki_test_password@postgres-test:5432/vpnshiki_test
+      TEST_POSTGRES_URL: postgresql+asyncpg://vpnshiki_test:vpnshiki_test_password@postgres-test:5432/vpnshiki_test
+      SESSION_DAYS: 30
+      COOKIE_SECURE: "false"
+      YOOMONEY_ENABLED: "false"
+    depends_on:
+      postgres-test:
+        condition: service_healthy
+    command:
+      - sh
+      - -c
+      - ruff check . && alembic upgrade head && python -m pytest

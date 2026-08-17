@@ -1,0 +1,14 @@
+services:
+  backend:
+    build: !reset null
+    image: ${BACKEND_IMAGE}
+    ports: !reset []
+
+  postgres:
+    ports: !reset []
+
+  frontend:
+    build: !reset null
+    image: ${FRONTEND_IMAGE}
+    ports: !override
+      - "127.0.0.1:${FRONTEND_PORT:-3001}:80"

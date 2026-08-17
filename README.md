@@ -19,8 +19,8 @@ docker compose up --build -d
 
 После запуска:
 
-- приложение: `http://127.0.0.1`;
-- API: `http://127.0.0.1/api`;
+- приложение: `http://127.0.0.1:3001`;
+- API: `http://127.0.0.1:3001/api`;
 - Swagger для авторизованного администратора: `http://127.0.0.1:8000/api/docs`.
 
 Первый администратор создаётся из `ADMIN_NAME` и `ADMIN_PASSWORD`, только если в базе ещё нет администратора. При существующем администраторе эти переменные не меняют его пароль.
@@ -94,3 +94,27 @@ pnpm test:e2e
 Локальная база приложения при этом не используется. Для запуска Playwright против уже
 подготовленного внешнего стенда используйте `pnpm test:e2e:direct` и переменные `E2E_BASE_URL`,
 `E2E_ADMIN_NAME`, `E2E_ADMIN_PASSWORD`.
+
+## CI/CD и деплой
+
+При push в `main` workflow `.github/workflows/ci.yml`:
+
+1. запускает lint, typecheck, unit- и E2E-тесты frontend;
+2. запускает lint и тесты backend, включая PostgreSQL integration test;
+3. собирает runtime-образы frontend и backend и публикует их в GHCR;
+4. по SSH обновляет сервисы на сервере через `compose.yaml` и `compose.prod.yaml`.
+
+В GitHub Environment `deploy` должны быть настроены secrets:
+
+- `DEPLOY_HOST` — адрес сервера;
+- `DEPLOY_USER` — SSH-пользователь;
+- `DEPLOY_SSH_KEY` — приватный SSH-ключ;
+- `DEPLOY_PORT` — SSH-порт;
+- `DEPLOY_PATH` — каталог проекта на сервере.
+
+В `DEPLOY_PATH` должны находиться актуальные `compose.yaml`, `compose.prod.yaml` и серверный
+`.env` со всеми production-секретами. Для frontend задайте `FRONTEND_PORT=3001`.
+
+Production Compose публикует frontend только на `127.0.0.1:3001`, поэтому внешний nginx
+должен проксировать домен на `http://127.0.0.1:3001`. API отдельно наружу публиковать не
+нужно: запросы `/api` frontend-контейнер передаёт backend по внутренней Docker-сети.

@@ -1,0 +1,136 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_BASE: ghcr.io/${{ github.repository }}
+
+jobs:
+  frontend-tests:
+    name: Frontend (lint, typecheck, unit, e2e)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: frontend/package.json
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        working-directory: frontend
+        run: pnpm lint
+
+      - name: Typecheck
+        working-directory: frontend
+        run: pnpm typecheck
+
+      - name: Unit tests
+        working-directory: frontend
+        run: pnpm test
+
+      - name: Install Playwright browser
+        working-directory: frontend
+        run: pnpm exec playwright install --with-deps chrome
+
+      - name: E2E tests
+        working-directory: frontend
+        run: pnpm test:e2e
+
+      - name: Collect e2e logs on failure
+        if: failure()
+        run: docker compose --project-name vpnshiki-e2e -f compose.yaml -f compose.e2e.yaml logs --no-color || true
+
+  backend-tests:
+    name: Backend (lint, tests)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Run test suite
+        run: docker compose -f compose.test.yaml up --build --abort-on-container-exit --exit-code-from backend-test
+
+      - name: Tear down test stack
+        if: always()
+        run: docker compose -f compose.test.yaml down --volumes --remove-orphans
+
+  deploy:
+    name: Deploy to server
+    needs: [frontend-tests, backend-tests]
+    runs-on: ubuntu-latest
+    environment: deploy
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@v4
+
+      - name: Build and push backend image
+        uses: docker/build-push-action@v7
+        with:
+          context: backend
+          target: runtime
+          push: true
+          tags: |
+            ${{ env.IMAGE_BASE }}-backend:${{ github.sha }}
+            ${{ env.IMAGE_BASE }}-backend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v7
+        with:
+          context: frontend
+          target: runtime
+          push: true
+          tags: |
+            ${{ env.IMAGE_BASE }}-frontend:${{ github.sha }}
+            ${{ env.IMAGE_BASE }}-frontend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy over SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT }}
+          script: |
+            set -e
+            cd ${{ secrets.DEPLOY_PATH }}
+            export BACKEND_IMAGE=${{ env.IMAGE_BASE }}-backend:${{ github.sha }}
+            export FRONTEND_IMAGE=${{ env.IMAGE_BASE }}-frontend:${{ github.sha }}
+            echo "$GHCR_TOKEN" | docker login ${{ env.REGISTRY }} -u ${{ github.actor }} --password-stdin
+            docker compose -f compose.yaml -f compose.prod.yaml pull
+            docker compose -f compose.yaml -f compose.prod.yaml up -d --no-build
+            docker image prune -f
+          envs: GHCR_TOKEN
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
