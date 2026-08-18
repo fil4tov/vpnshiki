@@ -27,7 +27,7 @@ const defaults = (user?: User): FormValues => ({
   name: user?.name ?? '',
   password: '',
   balance: user?.balance ?? '0.00',
-  negativeBalanceLimit: user?.negative_balance_limit ?? '500.00',
+  negativeBalanceLimit: user?.negative_balance_limit ?? '300.00',
   role: user?.role ?? 'user',
   accountStatus: user?.account_status ?? 'active',
 });

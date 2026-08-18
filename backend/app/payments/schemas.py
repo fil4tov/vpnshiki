@@ -15,7 +15,6 @@ PaymentAmount = Annotated[
 
 class YooMoneyPaymentCreate(BaseModel):
     amount: PaymentAmount
-    payment_type: YooMoneyPaymentType
 
 
 class YooMoneyCheckout(BaseModel):
@@ -29,15 +28,34 @@ class YooMoneyPaymentRead(BaseModel):
 
     id: UUID
     status: YooMoneyPaymentStatus
-    payment_type: YooMoneyPaymentType
-    credit_amount: Decimal
-    payable_amount: Decimal
+    requested_amount: Decimal
     received_amount: Decimal | None
-    review_reason: str | None
     created_at: datetime
     paid_at: datetime | None
     checkout: YooMoneyCheckout | None = None
 
-    @field_serializer("credit_amount", "payable_amount", "received_amount")
+    @field_serializer("requested_amount", "received_amount")
     def serialize_amount(self, value: Decimal | None) -> str | None:
+        return f"{value:.2f}" if value is not None else None
+
+
+class YooMoneyAdminPaymentRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: UUID
+    user_id: UUID
+    user_name: str
+    label: str
+    requested_amount: Decimal
+    withdrawn_amount: Decimal | None
+    received_amount: Decimal | None
+    payment_type: YooMoneyPaymentType | None
+    operation_id: str | None
+    status: YooMoneyPaymentStatus
+    last_reconciliation_check_at: datetime | None
+    created_at: datetime
+    paid_at: datetime | None
+
+    @field_serializer("requested_amount", "withdrawn_amount", "received_amount")
+    def serialize_admin_amount(self, value: Decimal | None) -> str | None:
         return f"{value:.2f}" if value is not None else None

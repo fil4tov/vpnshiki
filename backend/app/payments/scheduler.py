@@ -1,7 +1,6 @@
 import asyncio
 import logging
 from datetime import UTC, datetime, timedelta
-from decimal import Decimal, InvalidOperation
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
@@ -11,7 +10,7 @@ from app.config import Settings
 
 from .client import YooMoneyClient
 from .models import YooMoneyPayment, YooMoneyPaymentStatus
-from .service import LABEL_PREFIX, reconcile_operation
+from .service import parse_history_operation, reconcile_operation
 
 logger = logging.getLogger(__name__)
 RECONCILIATION_INTERVAL_SECONDS = 300
@@ -86,24 +85,10 @@ class YooMoneyReconciliationScheduler:
     async def _reconcile_operation(self, operation: object) -> None:
         if not isinstance(operation, dict):
             return
-        label = operation.get("label")
-        operation_id = operation.get("operation_id")
-        if (
-            not isinstance(label, str)
-            or not label.startswith(LABEL_PREFIX)
-            or not isinstance(operation_id, str)
-            or operation.get("status") != "success"
-            or operation.get("direction") != "in"
-        ):
+        parsed = parse_history_operation(operation)
+        if parsed is None:
             return
-        try:
-            received_amount = Decimal(str(operation.get("amount"))).quantize(Decimal("0.01"))
-            paid_at = datetime.fromisoformat(str(operation.get("datetime")))
-        except (InvalidOperation, ValueError):
-            logger.warning("YooMoney вернул операцию с некорректной суммой или датой")
-            return
-        if paid_at.tzinfo is None:
-            paid_at = paid_at.replace(tzinfo=UTC)
+        label, operation_id, received_amount, paid_at = parsed
         async with self._session_factory() as db:
             if await reconcile_operation(
                 db,

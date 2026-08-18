@@ -1,0 +1,27 @@
+.sortableHeader { white-space: nowrap; }
+.sortableHeader button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: -7px;
+  padding: 7px;
+  color: inherit;
+  font: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  transition: color 150ms ease, background 150ms ease;
+}
+.sortableHeader button:hover { color: var(--text); background: var(--surface-muted); }
+.sortableHeader button:focus-visible { outline: none; box-shadow: var(--focus); }
+.sortIcon { display: grid; width: 12px; place-items: center; color: var(--accent-bright); font-size: .72rem; }
+.idleSortIcon { grid-template-rows: 5px 5px; color: var(--text-muted); }
+.idleSortIcon svg { font-size: .58rem; }
+.srOnly { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sortableHeader button { transition-duration: .01ms; }
+}

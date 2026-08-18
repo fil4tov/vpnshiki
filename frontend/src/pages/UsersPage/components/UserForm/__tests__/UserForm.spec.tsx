@@ -13,7 +13,7 @@ describe('UserForm', () => {
 
     const password = screen.getByLabelText('Начальный пароль');
     expect(screen.getByLabelText('Имя')).toHaveAttribute('placeholder', 'username');
-    expect(screen.getByLabelText('Допустимый минус, ₽')).toHaveValue(500);
+    expect(screen.getByLabelText('Допустимый минус, ₽')).toHaveValue(300);
     expect(password).not.toHaveValue('');
     expect(password).toHaveAttribute('type', 'text');
   });

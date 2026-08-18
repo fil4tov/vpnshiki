@@ -1,0 +1,37 @@
+.filters { display: grid; gap: 12px; padding: 2px 0; }
+.search { display: flex; width: 100%; min-width: 0; min-height: 46px; align-items: center; gap: 9px; padding: 0 10px 0 12px; color: var(--text-muted); background: var(--surface-muted); border: 1px solid var(--border); border-radius: 12px; }
+.search:focus-within { border-color: var(--accent); box-shadow: var(--focus); }
+.search input { min-width: 0; width: 100%; color: var(--text); background: transparent; border: 0; outline: 0; font-size: .76rem; }
+.search button { display: grid; flex: 0 0 30px; width: 30px; height: 30px; place-items: center; color: var(--text-muted); cursor: pointer; background: transparent; border: 0; border-radius: 8px; }
+.search button:hover { color: var(--text); background: var(--surface-muted); }
+.search button:focus-visible { outline: none; box-shadow: var(--focus); }
+.filterRow { display: flex; align-items: flex-end; gap: 10px; }
+.filterControl { position: relative; flex: 0 0 auto; min-width: 190px; }
+.select { width: max-content; min-width: 190px; gap: 4px; }
+.select > span { padding-left: 3px; color: var(--text-muted); font-size: .6rem; text-transform: uppercase; letter-spacing: .08em; }
+.select > button { width: max-content; min-width: 100%; border-radius: 23px; }
+.select > button > span { overflow: visible; text-overflow: clip; }
+.filterControl:has(.clearFilter) .select > button { padding-right: 45px; }
+.clearFilter, .clearAll { display: grid; place-items: center; color: var(--text-muted); cursor: pointer; background: transparent; border: 0; transition: color 150ms ease, border-color 150ms ease, background 150ms ease; }
+.clearFilter { position: absolute; z-index: 1; right: 7px; bottom: 8px; width: 30px; height: 30px; border-radius: 50%; }
+.clearAll { flex: 0 0 46px; width: 46px; height: 46px; background: var(--surface-muted); border: 1px solid var(--border); border-radius: 50%; }
+.clearFilter:hover:not(:disabled), .clearAll:hover:not(:disabled) { color: var(--text); background: var(--accent-soft); border-color: var(--border-strong); }
+.clearFilter:focus-visible, .clearAll:focus-visible { outline: none; box-shadow: var(--focus); }
+.clearFilter:disabled, .clearAll:disabled { cursor: default; opacity: .34; }
+.srOnly { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+@media (max-width: 880px) {
+  .filterRow { flex-wrap: wrap; }
+}
+
+@media (max-width: 620px) {
+  .filterControl { flex: 1 1 calc(50% - 5px); min-width: 0; }
+  .select, .select > button { width: 100%; min-width: 0; }
+}
+
+@media (max-width: 480px) {
+  .filters, .filterRow { gap: 9px; }
+  .filterControl { flex-basis: calc(100% - 56px); }
+}
+
+@media (prefers-reduced-motion: reduce) { .clearFilter, .clearAll { transition: none; } }

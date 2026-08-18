@@ -3,7 +3,11 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { FiAlertTriangle, FiCheckCircle, FiClock } from 'react-icons/fi';
 import { useNavigate, useParams } from 'react-router-dom';
 
-import { getYooMoneyPayment, yooMoneyPaymentKey } from '#entities/payment';
+import {
+  getYooMoneyPayment,
+  reconcileYooMoneyPayment,
+  yooMoneyPaymentKey,
+} from '#entities/payment';
 import {
   adminUsersKey,
   getCurrentUser,
@@ -15,17 +19,29 @@ import { Button, LoadingState, Surface } from '#shared/ui';
 
 import styles from './PaymentResultPage.module.scss';
 
+const PAYMENT_POLL_INTERVAL_MS = 10_000;
+const TARGETED_RECONCILIATION_WINDOW_MS = 60_000;
+
 export function PaymentResultPage() {
   const { paymentId = '' } = useParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const setUser = useUserStore((state) => state.setUser);
   const refreshedPaymentId = useRef<string | null>(null);
+  const reconciliationStartedAt = useRef<number | null>(null);
   const paymentQuery = useQuery({
     queryKey: yooMoneyPaymentKey(paymentId),
-    queryFn: () => getYooMoneyPayment(paymentId),
+    queryFn: () => {
+      const now = Date.now();
+      reconciliationStartedAt.current ??= now;
+      return now - reconciliationStartedAt.current < TARGETED_RECONCILIATION_WINDOW_MS
+        ? reconcileYooMoneyPayment(paymentId)
+        : getYooMoneyPayment(paymentId);
+    },
     enabled: Boolean(paymentId),
-    refetchInterval: (query) => query.state.data?.status === 'pending' ? 3_000 : false,
+    refetchInterval: (query) => (
+      query.state.data?.status === 'pending' ? PAYMENT_POLL_INTERVAL_MS : false
+    ),
   });
 
   useEffect(() => {
@@ -65,12 +81,9 @@ export function PaymentResultPage() {
     succeeded: {
       icon: <FiCheckCircle className={styles.successIcon} aria-hidden="true" />,
       title: 'Баланс пополнен',
-      text: `${formatMoney(payment.credit_amount)} успешно зачислены на ваш баланс.`,
-    },
-    review_required: {
-      icon: <FiAlertTriangle className={styles.dangerIcon} aria-hidden="true" />,
-      title: 'Платёж требует проверки',
-      text: 'Деньги не зачислены автоматически. Обратитесь к администратору и сообщите номер платежа.',
+      text: payment.received_amount
+        ? `${formatMoney(payment.received_amount)} успешно зачислены на ваш баланс.`
+        : 'Платёж успешно подтверждён.',
     },
   }[payment.status];
 
@@ -80,9 +93,6 @@ export function PaymentResultPage() {
       <p className={styles.eyebrow}>YooMoney</p>
       <h1>{content.title}</h1>
       <p>{content.text}</p>
-      {payment.status === 'review_required' && (
-        <code className={styles.paymentId}>{payment.id}</code>
-      )}
       <Button type="button" onClick={() => navigate('/')}>Вернуться на главную</Button>
     </Surface>
   );

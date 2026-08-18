@@ -16,8 +16,8 @@ from app.bootstrap import ensure_admin
 from app.config import get_settings
 from app.db import SessionFactory
 from app.errors import ApiError
-from app.payments.yoomoney import router as yoomoney_router
-from app.payments.yoomoney.scheduler import YooMoneyReconciliationScheduler
+from app.payments import router as yoomoney_router
+from app.payments.scheduler import YooMoneyReconciliationScheduler
 from app.tariff_plans import router as tariff_plans_router
 from app.users.router import router as users_router
 from app.vpn_access import router as vpn_access_router

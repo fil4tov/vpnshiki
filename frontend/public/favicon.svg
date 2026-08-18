@@ -1,0 +1,26 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="64"
+  height="64"
+  viewBox="0 0 38 38"
+  fill="none"
+  role="img"
+  aria-labelledby="title"
+>
+  <title id="title">VPNщики</title>
+  <defs>
+    <linearGradient id="mark-gradient" x1="7.9" y1="3.4" x2="30.1" y2="34.6" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#8B5CF6" />
+      <stop offset="1" stop-color="#C064FF" />
+    </linearGradient>
+  </defs>
+
+  <path
+    d="M13 0H33C35.7614 0 38 2.23858 38 5V25C38 32.1797 32.1797 38 25 38H13C5.8203 38 0 32.1797 0 25V13C0 5.8203 5.8203 0 13 0Z"
+    fill="url(#mark-gradient)"
+  />
+  <path
+    d="M12 11.5H15.3L19 22.9L22.7 11.5H26L20.9 26.5H17.1L12 11.5Z"
+    fill="white"
+  />
+</svg>

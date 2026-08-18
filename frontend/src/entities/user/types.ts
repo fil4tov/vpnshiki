@@ -1,5 +1,6 @@
 export type UserRole = 'admin' | 'user';
 export type AccountStatus = 'active' | 'paused' | 'blocked';
+export type AccountBlockSource = 'billing' | 'admin';
 export type VpnStatus = 'online' | 'offline' | 'unknown';
 export type StatusChangeSource = 'bootstrap' | 'admin' | 'billing' | 'top_up' | 'user';
 
@@ -10,6 +11,7 @@ export interface User {
   negative_balance_limit: string;
   role: UserRole;
   account_status: AccountStatus;
+  block_source: AccountBlockSource | null;
   created_at: string;
   updated_at: string;
 }

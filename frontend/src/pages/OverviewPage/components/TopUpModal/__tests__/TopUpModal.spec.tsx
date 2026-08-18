@@ -17,17 +17,14 @@ vi.mock('../utils', () => ({ submitCheckoutForm: vi.fn() }));
 const payment: YooMoneyPayment = {
   id: 'payment-one',
   status: 'pending',
-  payment_type: 'PC',
-  credit_amount: '100.00',
-  payable_amount: '101.00',
+  requested_amount: '100.00',
   received_amount: null,
-  review_reason: null,
   created_at: new Date().toISOString(),
   paid_at: null,
   checkout: {
     action: 'https://yoomoney.ru/quickpay/confirm',
     method: 'POST',
-    fields: { label: 'pay_123', sum: '101.00' },
+    fields: { label: 'pay_123', sum: '100.00', paymentType: 'AC' },
   },
 };
 
@@ -40,22 +37,22 @@ describe('TopUpModal', () => {
   it('creates a payment, shows the authoritative summary and submits checkout', async () => {
     render(<TopUpModal open onClose={() => undefined} />);
 
+    expect(screen.queryByText('Укажите сумму, которую хотите заплатить.')).not.toBeInTheDocument();
+    expect(screen.getByText(/ЮMoney взимает комиссию от 1 до 3%/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Продолжить' }));
-    expect(await screen.findByText('Введите сумму пополнения')).toBeInTheDocument();
+    expect(await screen.findByText('Введите сумму платежа')).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText('Сумма пополнения, ₽'), {
+    fireEvent.change(screen.getByLabelText('Сумма платежа, ₽'), {
       target: { value: '100' },
     });
-    fireEvent.click(screen.getByLabelText('Кошелёк YooMoney'));
     fireEvent.click(screen.getByRole('button', { name: 'Продолжить' }));
 
     await waitFor(() => expect(createYooMoneyPayment).toHaveBeenCalledWith({
       amount: '100',
-      payment_type: 'PC',
     }));
-    expect(screen.getByText('На баланс')).toBeInTheDocument();
+    expect(screen.getByText('К оплате')).toBeInTheDocument();
     expect(screen.getByText(/100,00/)).toBeInTheDocument();
-    expect(screen.getByText(/101,00/)).toBeInTheDocument();
+    expect(screen.getByText(/ЮMoney взимает комиссию от 1 до 3%/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Перейти к оплате' }));
     expect(submitCheckoutForm).toHaveBeenCalledWith(payment.checkout);
@@ -63,7 +60,7 @@ describe('TopUpModal', () => {
 
   it('validates the configured amount range', async () => {
     render(<TopUpModal open onClose={() => undefined} />);
-    fireEvent.change(screen.getByLabelText('Сумма пополнения, ₽'), {
+    fireEvent.change(screen.getByLabelText('Сумма платежа, ₽'), {
       target: { value: '9.99' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Продолжить' }));
@@ -79,7 +76,7 @@ describe('TopUpModal', () => {
       fieldErrors: { amount: 'Некорректная сумма пополнения' },
     }));
     render(<TopUpModal open onClose={() => undefined} />);
-    fireEvent.change(screen.getByLabelText('Сумма пополнения, ₽'), {
+    fireEvent.change(screen.getByLabelText('Сумма платежа, ₽'), {
       target: { value: '100' },
     });
     fireEvent.click(screen.getByRole('button', { name: 'Продолжить' }));

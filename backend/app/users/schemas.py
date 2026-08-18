@@ -19,6 +19,11 @@ class VpnStatus(StrEnum):
     UNKNOWN = "unknown"
 
 
+class AccountBlockSource(StrEnum):
+    BILLING = "billing"
+    ADMIN = "admin"
+
+
 class UserRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -28,6 +33,7 @@ class UserRead(BaseModel):
     negative_balance_limit: Decimal
     role: UserRole
     account_status: AccountStatus
+    block_source: AccountBlockSource | None = None
     created_at: datetime
     updated_at: datetime
 

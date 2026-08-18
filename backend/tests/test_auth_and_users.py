@@ -1,16 +1,24 @@
+import importlib
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from uuid import UUID
 
+import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.auth.models import AuthSession
 from app.auth.security import hash_password
-from app.billing.models import UserDailyCharge, UserStatusHistory, UserTopUp
+from app.billing.models import (
+    StatusChangeSource,
+    UserDailyCharge,
+    UserStatusHistory,
+    VpnSyncJob,
+)
 from app.errors import ApiError
 from app.main import app
+from app.payments.models import YooMoneyPayment, YooMoneyPaymentStatus
 from app.tariff_plans.models import TariffPlan
 from app.users.models import AccountStatus, User
 from app.vpn_access.dependencies import get_xui_client
@@ -120,19 +128,36 @@ async def test_admin_creates_and_updates_user(
                     tariff_plan_id=plan.id,
                     created_at=datetime(2026, 8, 2, tzinfo=UTC),
                 ),
-                UserTopUp(
+                YooMoneyPayment(
                     user_id=user_id,
-                    amount=Decimal("4.75"),
+                    label="pay_history_older",
+                    requested_amount=Decimal("5.00"),
+                    received_amount=Decimal("4.75"),
+                    operation_id="history-operation-older",
+                    status=YooMoneyPaymentStatus.SUCCEEDED.value,
                     balance_before=Decimal("2.34"),
                     balance_after=Decimal("7.09"),
                     created_at=datetime(2026, 8, 3, tzinfo=UTC),
+                    paid_at=datetime(2026, 8, 3, 12, tzinfo=UTC),
                 ),
-                UserTopUp(
+                YooMoneyPayment(
                     user_id=user_id,
-                    amount=Decimal("5.25"),
+                    label="pay_history_newer",
+                    requested_amount=Decimal("5.50"),
+                    received_amount=Decimal("5.25"),
+                    operation_id="history-operation-newer",
+                    status=YooMoneyPaymentStatus.SUCCEEDED.value,
                     balance_before=Decimal("7.09"),
                     balance_after=Decimal("12.34"),
                     created_at=datetime(2026, 8, 4, tzinfo=UTC),
+                    paid_at=datetime(2026, 8, 4, 12, tzinfo=UTC),
+                ),
+                YooMoneyPayment(
+                    user_id=user_id,
+                    label="pay_history_pending",
+                    requested_amount=Decimal("100.00"),
+                    status=YooMoneyPaymentStatus.PENDING.value,
+                    created_at=datetime(2026, 8, 5, tzinfo=UTC),
                 ),
             ]
         )
@@ -347,6 +372,309 @@ async def test_reactivating_paused_account_enables_vpn_immediately(client: Async
 
     assert response.status_code == 200
     assert provider.updates == [("web-Возобновление", True)]
+
+
+@pytest.mark.parametrize(
+    ("initial_status", "initial_balance", "initial_limit", "changes"),
+    [
+        (AccountStatus.ACTIVE, "0.00", "300.00", {"balance": "-300.01"}),
+        (
+            AccountStatus.PAUSED,
+            "-200.00",
+            "300.00",
+            {"negative_balance_limit": "199.99"},
+        ),
+    ],
+)
+async def test_financial_admin_edit_blocks_active_and_paused_accounts(
+    client: AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+    initial_status: AccountStatus,
+    initial_balance: str,
+    initial_limit: str,
+    changes: dict[str, str],
+) -> None:
+    provider = FakeStatusXuiClient()
+    app.dependency_overrides[get_xui_client] = lambda: provider
+    sync_requests = 0
+
+    def request_sync() -> None:
+        nonlocal sync_requests
+        sync_requests += 1
+
+    router_module = importlib.import_module("app.admin.router")
+    monkeypatch.setattr(router_module, "request_vpn_sync_processing", request_sync)
+    await login(client)
+    created = await client.post(
+        "/api/admin/users",
+        json={
+            "name": f"Финансовая блокировка {initial_status.value}",
+            "password": "user-password",
+            "balance": initial_balance,
+            "negative_balance_limit": initial_limit,
+            "account_status": initial_status.value,
+        },
+    )
+    user_id = UUID(created.json()["id"])
+
+    response = await client.patch(f"/api/admin/users/{user_id}", json=changes)
+
+    assert response.status_code == 200
+    assert response.json()["account_status"] == AccountStatus.BLOCKED.value
+    assert response.json()["block_source"] == StatusChangeSource.BILLING.value
+    assert provider.updates == []
+    assert sync_requests == 1
+    async with session_factory() as db:
+        billing_status = await db.scalar(
+            select(UserStatusHistory).where(
+                UserStatusHistory.user_id == user_id,
+                UserStatusHistory.source == StatusChangeSource.BILLING.value,
+            )
+        )
+        assert billing_status is not None
+        assert billing_status.previous_status == initial_status.value
+        assert billing_status.new_status == AccountStatus.BLOCKED.value
+        assert billing_status.changed_by_user_id is None
+        job = await db.scalar(select(VpnSyncJob).where(VpnSyncJob.user_id == user_id))
+        assert job is not None and job.desired_enabled is False
+    await client.post("/api/auth/logout")
+    login_response = await login(
+        client,
+        f"Финансовая блокировка {initial_status.value}",
+        "user-password",
+    )
+    assert login_response.json()["block_source"] == StatusChangeSource.BILLING.value
+    assert (await client.get("/api/auth/me")).json()["block_source"] == (
+        StatusChangeSource.BILLING.value
+    )
+
+
+async def test_financial_admin_edit_allows_exact_negative_limit(
+    client: AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    await login(client)
+    created = await client.post(
+        "/api/admin/users",
+        json={
+            "name": "Граница лимита",
+            "password": "user-password",
+            "negative_balance_limit": "300.00",
+        },
+    )
+    user_id = UUID(created.json()["id"])
+
+    response = await client.patch(
+        f"/api/admin/users/{user_id}",
+        json={"balance": "-300.00"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["account_status"] == AccountStatus.ACTIVE.value
+    async with session_factory() as db:
+        assert await db.scalar(
+            select(VpnSyncJob).where(VpnSyncJob.user_id == user_id)
+        ) is None
+
+
+@pytest.mark.parametrize("restored_status", [AccountStatus.ACTIVE, AccountStatus.PAUSED])
+async def test_financial_admin_edit_restores_status_before_billing_block(
+    client: AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+    restored_status: AccountStatus,
+) -> None:
+    provider = FakeStatusXuiClient()
+    app.dependency_overrides[get_xui_client] = lambda: provider
+    sync_requests = 0
+
+    def request_sync() -> None:
+        nonlocal sync_requests
+        sync_requests += 1
+
+    router_module = importlib.import_module("app.admin.router")
+    monkeypatch.setattr(router_module, "request_vpn_sync_processing", request_sync)
+    await login(client)
+    created = await client.post(
+        "/api/admin/users",
+        json={
+            "name": f"Восстановление {restored_status.value}",
+            "password": "user-password",
+            "balance": "-400.00",
+            "negative_balance_limit": "300.00",
+            "account_status": restored_status.value,
+        },
+    )
+    user_id = UUID(created.json()["id"])
+    async with session_factory() as db:
+        user = await db.get(User, user_id)
+        assert user is not None
+        user.account_status = AccountStatus.BLOCKED.value
+        db.add(
+            UserStatusHistory(
+                user_id=user_id,
+                previous_status=restored_status.value,
+                new_status=AccountStatus.BLOCKED.value,
+                changed_by_user_id=None,
+                source=StatusChangeSource.BILLING.value,
+                effective_at=datetime.now(UTC),
+            )
+        )
+        await db.commit()
+
+    response = await client.patch(
+        f"/api/admin/users/{user_id}",
+        json={"balance": "-300.00"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["account_status"] == restored_status.value
+    assert response.json()["block_source"] is None
+    assert provider.updates == []
+    assert sync_requests == 1
+    async with session_factory() as db:
+        job = await db.scalar(select(VpnSyncJob).where(VpnSyncJob.user_id == user_id))
+        assert job is not None
+        assert job.desired_enabled is (restored_status == AccountStatus.ACTIVE)
+        history = (
+            await db.scalars(
+                select(UserStatusHistory)
+                .where(UserStatusHistory.user_id == user_id)
+                .order_by(UserStatusHistory.created_at)
+            )
+        ).all()
+        assert history[-1].previous_status == AccountStatus.BLOCKED.value
+        assert history[-1].new_status == restored_status.value
+        assert history[-1].source == StatusChangeSource.ADMIN.value
+
+
+async def test_financial_admin_edit_does_not_restore_manual_block(
+    client: AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    await login(client)
+    created = await client.post(
+        "/api/admin/users",
+        json={
+            "name": "Ручная блокировка с балансом",
+            "password": "user-password",
+            "balance": "-400.00",
+            "negative_balance_limit": "300.00",
+            "account_status": AccountStatus.BLOCKED.value,
+        },
+    )
+    user_id = UUID(created.json()["id"])
+    assert created.json()["block_source"] == StatusChangeSource.ADMIN.value
+
+    response = await client.patch(
+        f"/api/admin/users/{user_id}",
+        json={"balance": "0.00"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["account_status"] == AccountStatus.BLOCKED.value
+    assert response.json()["block_source"] == StatusChangeSource.ADMIN.value
+    async with session_factory() as db:
+        history_count = await db.scalar(
+            select(func.count())
+            .select_from(UserStatusHistory)
+            .where(UserStatusHistory.user_id == user_id)
+        )
+        assert history_count == 1
+
+
+@pytest.mark.parametrize("selected_status", [AccountStatus.ACTIVE, AccountStatus.PAUSED])
+async def test_manual_status_overrides_financial_check_for_previously_blocked_account(
+    client: AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+    selected_status: AccountStatus,
+) -> None:
+    provider = FakeStatusXuiClient()
+    app.dependency_overrides[get_xui_client] = lambda: provider
+    await login(client)
+    created = await client.post(
+        "/api/admin/users",
+        json={
+            "name": f"Ручной приоритет {selected_status.value}",
+            "password": "user-password",
+            "balance": "-500.00",
+            "negative_balance_limit": "300.00",
+            "account_status": AccountStatus.BLOCKED.value,
+        },
+    )
+    user_id = UUID(created.json()["id"])
+
+    response = await client.patch(
+        f"/api/admin/users/{user_id}",
+        json={
+            "account_status": selected_status.value,
+            "balance": "-400.00",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["account_status"] == selected_status.value
+    assert provider.updates == (
+        [(f"web-Ручной приоритет {selected_status.value}", True)]
+        if selected_status == AccountStatus.ACTIVE
+        else []
+    )
+    async with session_factory() as db:
+        billing_status_count = await db.scalar(
+            select(func.count())
+            .select_from(UserStatusHistory)
+            .where(
+                UserStatusHistory.user_id == user_id,
+                UserStatusHistory.source == StatusChangeSource.BILLING.value,
+            )
+        )
+        assert billing_status_count == 0
+
+
+async def test_financial_block_avoids_transient_vpn_enable(
+    client: AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    provider = FakeStatusXuiClient()
+    app.dependency_overrides[get_xui_client] = lambda: provider
+    sync_requests = 0
+
+    def request_sync() -> None:
+        nonlocal sync_requests
+        sync_requests += 1
+
+    router_module = importlib.import_module("app.admin.router")
+    monkeypatch.setattr(router_module, "request_vpn_sync_processing", request_sync)
+    await login(client)
+    created = await client.post(
+        "/api/admin/users",
+        json={
+            "name": "Без промежуточного включения",
+            "password": "user-password",
+            "balance": "-200.00",
+            "negative_balance_limit": "300.00",
+            "account_status": AccountStatus.PAUSED.value,
+        },
+    )
+    user_id = UUID(created.json()["id"])
+
+    response = await client.patch(
+        f"/api/admin/users/{user_id}",
+        json={
+            "account_status": AccountStatus.ACTIVE.value,
+            "negative_balance_limit": "100.00",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["account_status"] == AccountStatus.BLOCKED.value
+    assert provider.updates == []
+    assert sync_requests == 1
+    async with session_factory() as db:
+        job = await db.scalar(select(VpnSyncJob).where(VpnSyncJob.user_id == user_id))
+        assert job is not None and job.desired_enabled is False
 
 
 async def test_provider_failure_marks_vpn_status_unknown(client: AsyncClient) -> None:

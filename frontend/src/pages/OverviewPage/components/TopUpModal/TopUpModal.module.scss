@@ -12,44 +12,6 @@
   letter-spacing: -.035em;
 }
 
-.paymentTypes {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  border: 0;
-}
-
-.paymentTypes legend {
-  grid-column: 1 / -1;
-  margin-bottom: 8px;
-  color: var(--text-muted);
-  font-size: .78rem;
-}
-
-.paymentTypes label { position: relative; cursor: pointer; }
-.paymentTypes input { position: absolute; opacity: 0; }
-
-.paymentTypes span {
-  display: grid;
-  min-height: 52px;
-  place-items: center;
-  padding: 10px;
-  text-align: center;
-  background: var(--surface-muted);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-}
-
-.paymentTypes input:checked + span {
-  background: var(--accent-soft);
-  border-color: var(--border-strong);
-}
-
-.paymentTypes input:focus-visible + span { box-shadow: var(--focus); }
-
 .amounts { display: grid; gap: 10px; margin: 0; }
 
 .amounts div {
@@ -81,6 +43,5 @@
 }
 
 @media (max-width: 440px) {
-  .paymentTypes,
   .actions { display: grid; grid-template-columns: 1fr; }
 }

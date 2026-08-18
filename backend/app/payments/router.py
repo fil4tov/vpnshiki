@@ -1,23 +1,51 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Request, Response
+from sqlalchemy import select
 
-from app.auth.dependencies import CurrentUser, Database
+from app.auth.dependencies import CurrentAdmin, CurrentUser, Database
 from app.billing.scheduler import request_vpn_sync_processing
 from app.config import get_settings
 from app.errors import ApiError
+from app.users.models import User
 
-from .schemas import YooMoneyPaymentCreate, YooMoneyPaymentRead
+from .models import YooMoneyPayment
+from .schemas import YooMoneyAdminPaymentRead, YooMoneyPaymentCreate, YooMoneyPaymentRead
 from .service import (
     create_payment,
     get_user_payment,
     parse_notification_body,
     payment_read,
     process_notification,
+    reconcile_user_payment,
     verify_notification_signature,
 )
 
 router = APIRouter(tags=["payments"])
+
+
+@router.get(
+    "/api/admin/top-up-payments",
+    response_model=list[YooMoneyAdminPaymentRead],
+    tags=["admin", "payments"],
+)
+async def list_admin_yoomoney_payments(
+    _admin: CurrentAdmin,
+    db: Database,
+) -> list[YooMoneyAdminPaymentRead]:
+    rows = (
+        await db.execute(
+            select(YooMoneyPayment, User.name)
+            .join(User, User.id == YooMoneyPayment.user_id)
+            .order_by(YooMoneyPayment.created_at.desc(), YooMoneyPayment.id.desc())
+        )
+    ).all()
+    return [
+        YooMoneyAdminPaymentRead.model_validate(
+            {**payment.__dict__, "user_name": user_name}
+        )
+        for payment, user_name in rows
+    ]
 
 
 @router.post("/api/users/me/top-up-payments", response_model=YooMoneyPaymentRead)
@@ -36,6 +64,26 @@ async def read_yoomoney_payment(
     db: Database,
 ) -> YooMoneyPaymentRead:
     return payment_read(await get_user_payment(db, payment_id, user.id))
+
+
+@router.post(
+    "/api/users/me/top-up-payments/{payment_id}/reconcile",
+    response_model=YooMoneyPaymentRead,
+)
+async def reconcile_yoomoney_payment(
+    payment_id: UUID,
+    user: CurrentUser,
+    db: Database,
+) -> YooMoneyPaymentRead:
+    payment, reactivated = await reconcile_user_payment(
+        db,
+        payment_id=payment_id,
+        user_id=user.id,
+        settings=get_settings(),
+    )
+    if reactivated:
+        request_vpn_sync_processing()
+    return payment_read(payment)
 
 
 @router.post("/api/payments/yoomoney/webhook", include_in_schema=False)

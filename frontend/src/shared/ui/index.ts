@@ -1,5 +1,7 @@
 export { Badge } from './Badge';
 export { Button } from './Button';
+export { DataTable } from './DataTable';
+export type { DataTableColumn, DataTableSort, DataTableSortDirection } from './DataTable';
 export { FieldSelect } from './FieldSelect';
 export type { FieldSelectOption } from './FieldSelect';
 export { GeneratePasswordButton } from './GeneratePasswordButton';
@@ -10,6 +12,7 @@ export { Modal } from './Modal';
 export { MonthlyHistory } from './MonthlyHistory';
 export type { MonthlyHistoryGroup, MonthlyHistoryRow } from './MonthlyHistory';
 export { Surface } from './Surface';
+export { SummaryCard, SummaryCards } from './SummaryCards';
 export { Switch } from './Switch';
 export { TableActionButton } from './TableActionButton';
 export { PasswordField, TextField } from './TextField';

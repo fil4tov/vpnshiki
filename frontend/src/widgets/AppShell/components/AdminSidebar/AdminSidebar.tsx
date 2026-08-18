@@ -1,4 +1,4 @@
-import { FiCalendar, FiUsers } from 'react-icons/fi';
+import { FiCalendar, FiCreditCard, FiUsers } from 'react-icons/fi';
 import { NavLink } from 'react-router-dom';
 
 import styles from './AdminSidebar.module.scss';
@@ -14,6 +14,10 @@ export function AdminSidebar() {
         <NavLink to="/admin/tariff-plans" className={({ isActive }) => isActive ? styles.activeLink : styles.link}>
           <FiCalendar aria-hidden="true" />
           <span>Тарифные планы</span>
+        </NavLink>
+        <NavLink to="/admin/top-ups" className={({ isActive }) => isActive ? styles.activeLink : styles.link}>
+          <FiCreditCard aria-hidden="true" />
+          <span>Пополнения</span>
         </NavLink>
       </nav>
     </aside>

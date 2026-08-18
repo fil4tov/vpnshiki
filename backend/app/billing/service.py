@@ -106,7 +106,29 @@ async def queue_vpn_sync(db: AsyncSession, user_id: UUID, desired_enabled: bool)
     job.last_error = None
 
 
-async def reactivate_if_billing_blocked(
+async def block_if_balance_below_limit(
+    db: AsyncSession,
+    user: User,
+) -> bool:
+    if user.account_status not in {
+        AccountStatus.ACTIVE.value,
+        AccountStatus.PAUSED.value,
+    }:
+        return False
+    if user.balance >= -user.negative_balance_limit:
+        return False
+    await record_status_change(
+        db,
+        user,
+        AccountStatus.BLOCKED,
+        source=StatusChangeSource.BILLING,
+        changed_by_user_id=None,
+    )
+    await queue_vpn_sync(db, user.id, False)
+    return True
+
+
+async def restore_if_billing_blocked(
     db: AsyncSession,
     user: User,
     *,
@@ -132,14 +154,24 @@ async def reactivate_if_billing_blocked(
         or latest_status.source != StatusChangeSource.BILLING.value
     ):
         return False
+    restored_status = latest_status.previous_status
+    if restored_status not in {
+        AccountStatus.ACTIVE.value,
+        AccountStatus.PAUSED.value,
+    }:
+        return False
     await record_status_change(
         db,
         user,
-        AccountStatus.ACTIVE,
+        restored_status,
         source=source,
         changed_by_user_id=changed_by_user_id,
     )
-    await queue_vpn_sync(db, user.id, True)
+    await queue_vpn_sync(
+        db,
+        user.id,
+        restored_status == AccountStatus.ACTIVE.value,
+    )
     return True
 
 

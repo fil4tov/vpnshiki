@@ -36,32 +36,6 @@ class StatusChangeSource(StrEnum):
     USER = "user"
 
 
-class UserTopUp(Base):
-    __tablename__ = "user_top_ups"
-
-    id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
-    user_id: Mapped[UUID] = mapped_column(
-        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
-    )
-    yoomoney_payment_id: Mapped[UUID | None] = mapped_column(
-        Uuid(as_uuid=True),
-        ForeignKey("yoomoney_payments.id", ondelete="RESTRICT"),
-        nullable=True,
-        unique=True,
-    )
-    amount: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
-    balance_before: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
-    balance_after: Mapped[Decimal] = mapped_column(Numeric(14, 2), nullable=False)
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
-    )
-
-    __table_args__ = (
-        CheckConstraint("amount > 0", name="ck_user_top_ups_amount_positive"),
-        Index("ix_user_top_ups_user_created", "user_id", "created_at"),
-    )
-
-
 class UserDailyCharge(Base):
     __tablename__ = "user_daily_charges"
 

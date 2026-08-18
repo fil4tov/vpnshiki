@@ -1,6 +1,6 @@
 import { FiLock, FiPause, FiRadio } from 'react-icons/fi';
 
-import type { AccountStatus } from '#entities/user';
+import type { AccountBlockSource, AccountStatus } from '#entities/user';
 import { formatMoney, isNegativeMoney } from '#shared/lib/money';
 
 import { ActivationControl } from './components';
@@ -8,18 +8,21 @@ import styles from './ParticipationPulse.module.scss';
 
 interface ParticipationPulseProps {
   accountStatus: AccountStatus;
+  blockSource: AccountBlockSource | null;
   balance: string;
   negativeBalanceLimit: string;
   dailyCharge: string | null | undefined;
 }
 
-export function ParticipationPulse({ accountStatus, balance, negativeBalanceLimit, dailyCharge }: ParticipationPulseProps) {
+export function ParticipationPulse({ accountStatus, blockSource, balance, negativeBalanceLimit, dailyCharge }: ParticipationPulseProps) {
   const active = accountStatus === 'active';
   const blocked = accountStatus === 'blocked';
   const status = blocked ? 'Заблокирован' : active ? 'Активен' : 'Приостановлен';
   const title = blocked ? 'Аккаунт заблокирован' : active ? 'Аккаунт активен' : 'Аккаунт приостановлен';
   const description = blocked
-    ? 'Статус сможет изменить администратор после пополнения баланса.'
+    ? blockSource === 'billing'
+      ? 'Пополните баланс для разблокировки.'
+      : 'Обратитесь к администратору.'
     : active
       ? 'Ваш аккаунт включён в общий расчёт.'
       : 'Списания отменены, VPN-профиль заблокирован.';

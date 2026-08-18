@@ -1,3 +1,3 @@
-from . import yoomoney as yoomoney
+from .router import router
 
-__all__ = ["yoomoney"]
+__all__ = ["router"]

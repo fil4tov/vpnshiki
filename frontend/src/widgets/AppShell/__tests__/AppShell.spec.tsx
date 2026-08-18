@@ -12,7 +12,7 @@ import { AppShell } from '../AppShell';
 
 const baseUser = {
   id: 'one', name: 'Миша', balance: '10.00', negative_balance_limit: '200.00',
-  role: 'user' as const, account_status: 'active' as const,
+  role: 'user' as const, account_status: 'active' as const, block_source: null,
   created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
 };
 
@@ -31,6 +31,7 @@ function renderShell(path = '/') {
             <Route path="/" element={<div>Личный обзор</div>} />
             <Route path="/admin/users" element={<div>Список пользователей</div>} />
             <Route path="/admin/tariff-plans" element={<div>Тарифные планы</div>} />
+            <Route path="/admin/top-ups" element={<div>Пополнения</div>} />
           </Route>
         </Routes>
       </MemoryRouter>
@@ -113,6 +114,7 @@ describe('AppShell', () => {
     expect(screen.getByRole('navigation', { name: 'Навигация администратора' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Пользователи' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Тарифные планы' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Пополнения' })).toBeInTheDocument();
   });
 
   it('keeps the admin shell and header entry active on tariff plans', () => {
@@ -123,5 +125,14 @@ describe('AppShell', () => {
     expect(screen.getByRole('link', { name: 'Админ-панель' }).className).toContain('activeAdminLink');
     expect(screen.getByRole('link', { name: 'Тарифные планы' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('link', { name: 'Тарифные планы' })).toHaveAttribute('href', '/admin/tariff-plans');
+  });
+
+  it('keeps the admin shell active on top ups', () => {
+    useUserStore.setState({ user: { ...baseUser, role: 'admin' }, status: 'authenticated' });
+    renderShell('/admin/top-ups');
+
+    expect(screen.getByRole('navigation', { name: 'Навигация администратора' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Пополнения' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Пополнения' })).toHaveAttribute('href', '/admin/top-ups');
   });
 });

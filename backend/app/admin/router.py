@@ -9,15 +9,23 @@ from sqlalchemy.orm import aliased
 from app.auth.dependencies import CurrentAdmin, Database
 from app.auth.models import AuthSession
 from app.auth.security import hash_password
-from app.billing.models import StatusChangeSource, UserDailyCharge, UserStatusHistory, UserTopUp
+from app.billing.models import StatusChangeSource, UserDailyCharge, UserStatusHistory
+from app.billing.scheduler import request_vpn_sync_processing
 from app.billing.service import (
     add_initial_status_history,
+    block_if_balance_below_limit,
     profile_email,
-    reactivate_if_billing_blocked,
     record_status_change,
+    restore_if_billing_blocked,
 )
 from app.errors import ApiError
-from app.users.history import get_user_charge_history, get_user_top_up_history
+from app.payments.models import YooMoneyPayment, YooMoneyPaymentStatus
+from app.users.history import (
+    account_block_source,
+    get_user_charge_history,
+    get_user_read,
+    get_user_top_up_history,
+)
 from app.users.models import AccountStatus, User, UserRole
 from app.users.schemas import (
     AdminPasswordReset,
@@ -84,11 +92,23 @@ async def list_users(
     )
     top_up_totals = (
         select(
-            UserTopUp.user_id,
-            func.sum(UserTopUp.amount).label("total_top_ups"),
+            YooMoneyPayment.user_id,
+            func.sum(YooMoneyPayment.received_amount).label("total_top_ups"),
         )
-        .group_by(UserTopUp.user_id)
+        .where(YooMoneyPayment.status == YooMoneyPaymentStatus.SUCCEEDED.value)
+        .group_by(YooMoneyPayment.user_id)
         .subquery()
+    )
+    latest_status_source = (
+        select(UserStatusHistory.source)
+        .where(UserStatusHistory.user_id == User.id)
+        .order_by(
+            UserStatusHistory.effective_at.desc(),
+            UserStatusHistory.created_at.desc(),
+        )
+        .limit(1)
+        .correlate(User)
+        .scalar_subquery()
     )
     rows = (
         await db.execute(
@@ -96,6 +116,7 @@ async def list_users(
                 User,
                 func.coalesce(charge_totals.c.total_charged, 0).label("total_charged"),
                 func.coalesce(top_up_totals.c.total_top_ups, 0).label("total_top_ups"),
+                latest_status_source.label("latest_status_source"),
             )
             .outerjoin(charge_totals, charge_totals.c.user_id == User.id)
             .outerjoin(top_up_totals, top_up_totals.c.user_id == User.id)
@@ -113,6 +134,10 @@ async def list_users(
                 **UserRead.model_validate(user).model_dump(),
                 "total_charged": total_charged,
                 "total_top_ups": total_top_ups,
+                "block_source": account_block_source(
+                    user.account_status,
+                    latest_status_source,
+                ),
                 "vpn_status": (
                     VpnStatus.UNKNOWN
                     if online_clients is None
@@ -125,7 +150,7 @@ async def list_users(
                 ),
             }
         )
-        for user, total_charged, total_top_ups in rows
+        for user, total_charged, total_top_ups, latest_status_source in rows
     ]
 
 
@@ -207,7 +232,7 @@ async def create_user(
         raise _name_taken(error) from error
     await _commit_unique(db)
     await db.refresh(user)
-    return UserRead.model_validate(user)
+    return await get_user_read(db, user)
 
 
 @router.patch("/{user_id}", response_model=UserRead)
@@ -219,6 +244,7 @@ async def update_user(
     provider: XuiProvider,
 ) -> UserRead:
     user = await _get_user(db, user_id, for_update=True)
+    original_status = user.account_status
     changes = payload.model_dump(exclude_unset=True)
     target_role = changes.get("role")
     if user.role == UserRole.ADMIN.value and target_role == UserRole.USER:
@@ -234,11 +260,10 @@ async def update_user(
                 message="Нельзя понизить роль последнего администратора",
             )
     target_status = changes.pop("account_status", None)
-    if target_status is not None and target_status.value != user.account_status:
-        if target_status != AccountStatus.PAUSED:
-            await provider.set_matching_enabled(
-                profile_email(user), target_status == AccountStatus.ACTIVE
-            )
+    manual_status_changed = (
+        target_status is not None and target_status.value != user.account_status
+    )
+    if manual_status_changed:
         await record_status_change(
             db,
             user,
@@ -252,16 +277,29 @@ async def update_user(
         if field in {"balance", "negative_balance_limit"} and getattr(user, field) != normalized:
             financial_terms_changed = True
         setattr(user, field, normalized)
+    financial_status_changed = False
     if financial_terms_changed:
-        await reactivate_if_billing_blocked(
-            db,
-            user,
-            source=StatusChangeSource.ADMIN,
-            changed_by_user_id=admin.id,
-        )
+        if original_status == AccountStatus.BLOCKED.value:
+            if not manual_status_changed:
+                financial_status_changed = await restore_if_billing_blocked(
+                    db,
+                    user,
+                    source=StatusChangeSource.ADMIN,
+                    changed_by_user_id=admin.id,
+                )
+        else:
+            financial_status_changed = await block_if_balance_below_limit(db, user)
+    if manual_status_changed and not financial_status_changed:
+        assert target_status is not None
+        if target_status != AccountStatus.PAUSED:
+            await provider.set_matching_enabled(
+                profile_email(user), target_status == AccountStatus.ACTIVE
+            )
     await _commit_unique(db)
+    if financial_status_changed:
+        request_vpn_sync_processing()
     await db.refresh(user)
-    return UserRead.model_validate(user)
+    return await get_user_read(db, user)
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)

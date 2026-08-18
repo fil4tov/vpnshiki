@@ -9,6 +9,7 @@ import { LoginPage } from './LoginPage';
 import { OverviewPage } from './OverviewPage';
 import { PaymentResultPage } from './PaymentResultPage';
 import { TariffPlansPage } from './TariffPlansPage';
+import { TopUpsPage } from './TopUpsPage';
 import { UsersPage } from './UsersPage';
 
 interface PagesProps { theme: 'light' | 'dark'; toggleTheme: () => void }
@@ -29,6 +30,7 @@ export function Pages({ theme, toggleTheme }: PagesProps) {
         { path: '/admin', element: user?.role === 'admin' ? <Navigate to="/admin/users" replace /> : <Navigate to="/" replace /> },
         { path: '/admin/users', element: user?.role === 'admin' ? <UsersPage /> : <Navigate to="/" replace /> },
         { path: '/admin/tariff-plans', element: user?.role === 'admin' ? <TariffPlansPage /> : <Navigate to="/" replace /> },
+        { path: '/admin/top-ups', element: user?.role === 'admin' ? <TopUpsPage /> : <Navigate to="/" replace /> },
       ],
     },
     { path: '*', element: <Navigate to={status === 'authenticated' ? '/' : '/login'} replace /> },

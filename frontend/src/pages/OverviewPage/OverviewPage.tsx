@@ -32,6 +32,7 @@ export function OverviewPage() {
       </header>
       <ParticipationPulse
         accountStatus={user.account_status}
+        blockSource={user.block_source}
         balance={user.balance}
         negativeBalanceLimit={user.negative_balance_limit}
         dailyCharge={active && dailyChargeQuery.isPending

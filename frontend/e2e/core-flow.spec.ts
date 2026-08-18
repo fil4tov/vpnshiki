@@ -106,9 +106,9 @@ test('administrator manages a user account until deletion', async ({ page }) => 
 
   await page.getByRole('button', { name: 'Пополнить' }).click();
   const topUpDialog = page.getByRole('dialog', { name: 'Пополнить баланс' });
-  await topUpDialog.getByLabel('Сумма пополнения, ₽').fill('25.50');
+  await topUpDialog.getByLabel('Сумма платежа, ₽').fill('25.50');
   await topUpDialog.getByRole('button', { name: 'Продолжить' }).click();
-  await expect(topUpDialog.getByText(/26[\s\u00a0]*,29/)).toBeVisible();
+  await expect(topUpDialog.getByText(/25[\s\u00a0]*,50/)).toBeVisible();
   let checkoutBody = '';
   await page.route('https://yoomoney.ru/quickpay/confirm', async (route) => {
     checkoutBody = route.request().postData() ?? '';
@@ -118,11 +118,13 @@ test('administrator manages a user account until deletion', async ({ page }) => 
   await expect(page.getByRole('heading', { name: 'YooMoney test checkout' })).toBeVisible();
   const checkout = new URLSearchParams(checkoutBody);
   expect(checkout.get('label')).toMatch(/^pay_[0-9a-f]{32}$/);
+  expect(checkout.get('paymentType')).toBe('AC');
+  expect(checkout.get('sum')).toBe('25.50');
   const notification: Record<string, string> = {
-    notification_type: 'card-incoming',
+    notification_type: 'p2p-incoming',
     operation_id: 'e2e-top-up-operation',
-    amount: '25.50',
-    withdraw_amount: '26.29',
+    amount: '25.25',
+    withdraw_amount: '25.50',
     currency: '643',
     datetime: new Date().toISOString(),
     sender: '',
@@ -143,9 +145,9 @@ test('administrator manages a user account until deletion', async ({ page }) => 
   expect(successUrl).toBeTruthy();
   await page.goto(new URL(successUrl!).pathname);
   await expect(page.getByRole('heading', { name: 'Баланс пополнен' })).toBeVisible();
-  await expect(page.getByText(/25[\s\u00a0]*,50/)).toBeVisible();
+  await expect(page.getByText(/25[\s\u00a0]*,25/)).toBeVisible();
   await page.getByRole('button', { name: 'Вернуться на главную' }).click();
-  await expect(page.getByRole('region', { name: 'Статус участия и баланс' })).toContainText(/25[\s\u00a0]*,50/);
+  await expect(page.getByRole('region', { name: 'Статус участия и баланс' })).toContainText(/25[\s\u00a0]*,25/);
 
   await page.getByRole('button', { name: 'Открыть меню пользователя' }).click();
   await page.getByRole('menuitem', { name: 'Сменить пароль' }).click();
@@ -261,4 +263,29 @@ test('administrator maintains a continuous tariff plan schedule', async ({ page 
   await deleteDialog.getByRole('button', { name: 'Удалить план' }).click();
   await expect(deleteDialog).toBeHidden();
   await expect(initialRow.getByText('Бессрочно')).toBeVisible();
+});
+
+test('administrator inspects top-up operations', async ({ page }) => {
+  const adminName = process.env.E2E_ADMIN_NAME ?? 'admin';
+  const adminPassword = process.env.E2E_ADMIN_PASSWORD ?? 'change_me_now';
+
+  await page.goto('/login');
+  await page.getByLabel('Имя').fill(adminName);
+  await page.getByLabel('Пароль', { exact: true }).fill(adminPassword);
+  await page.getByRole('button', { name: 'Войти' }).click();
+  await expect(page.getByRole('heading', { name: new RegExp(`Привет, ${adminName}`) })).toBeVisible();
+  const paymentResponse = await page.request.post('/api/users/me/top-up-payments', {
+    data: { amount: '10.00' },
+  });
+  expect(paymentResponse.ok()).toBe(true);
+  const payment = await paymentResponse.json() as { id: string };
+  await page.getByRole('link', { name: 'Админ-панель' }).click();
+  await page.getByRole('link', { name: 'Пополнения' }).click();
+  await expect(page).toHaveURL(/\/admin\/top-ups$/);
+
+  await expect(page.getByRole('heading', { name: 'Журнал операций' })).toBeVisible();
+  await expect(page.getByRole('table')).toBeVisible();
+  await page.getByRole('button', { name: `Показать детали платежа ${payment.id}` }).click();
+  await expect(page.getByText('Label YooMoney')).toBeVisible();
+  await expect(page.getByText('Последняя проверка')).toBeVisible();
 });

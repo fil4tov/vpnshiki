@@ -36,14 +36,3 @@
 .pendingIcon { color: var(--warning); }
 .successIcon { color: var(--positive); }
 .dangerIcon { color: var(--danger); }
-
-.paymentId {
-  display: block;
-  max-width: 100%;
-  margin: -8px auto 24px;
-  padding: 8px 10px;
-  overflow-wrap: anywhere;
-  color: var(--text-muted);
-  background: var(--surface-muted);
-  border-radius: 8px;
-}

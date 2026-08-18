@@ -169,6 +169,7 @@ async def test_effective_status_controls_historical_daily_charge(
         user = await db.get(User, admin.id)
         assert user is not None
         user.created_at = created_at
+        user.balance = Decimal("-600.00")
         user.account_status = AccountStatus.PAUSED.value
         db.add(
             TariffPlan(
@@ -205,6 +206,8 @@ async def test_effective_status_controls_historical_daily_charge(
         assert first_run.charged_users_count == 1
         assert second_run.charged_users_count == 0
         assert await db.scalar(select(func.count()).select_from(UserDailyCharge)) == 1
+        await db.refresh(user)
+        assert user.account_status == AccountStatus.PAUSED.value
 
 
 async def test_catch_up_processes_every_day_from_current_plan_start(

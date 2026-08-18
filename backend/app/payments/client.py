@@ -17,6 +17,7 @@ class YooMoneyClient:
         self,
         *,
         from_datetime: datetime,
+        label: str | None = None,
         start_record: str | None = None,
     ) -> dict[str, Any]:
         data = {
@@ -26,6 +27,8 @@ class YooMoneyClient:
         }
         if start_record is not None:
             data["start_record"] = start_record
+        if label is not None:
+            data["label"] = label
         async with httpx.AsyncClient(timeout=10) as client:
             response = await client.post(
                 "https://yoomoney.ru/api/operation-history",

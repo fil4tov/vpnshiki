@@ -11,7 +11,7 @@ from app.billing.service import queue_vpn_sync, record_status_change
 from app.config import get_settings
 from app.errors import ApiError
 from app.tariff_plans.service import get_user_daily_charge
-from app.users.history import get_user_charge_history, get_user_top_up_history
+from app.users.history import get_user_charge_history, get_user_read, get_user_top_up_history
 from app.users.models import AccountStatus, User
 from app.users.schemas import (
     DailyChargeRead,
@@ -72,7 +72,7 @@ async def activate_account(user: CurrentUser, db: Database) -> UserRead:
     await db.commit()
     request_vpn_sync_processing()
     await db.refresh(stored_user)
-    return UserRead.model_validate(stored_user)
+    return await get_user_read(db, stored_user)
 
 
 @router.post("/me/password", response_model=UserRead)
@@ -93,4 +93,4 @@ async def change_password(
     await db.flush()
     token = await replace_all_sessions(db, user)
     set_session_cookie(response, token, get_settings())
-    return UserRead.model_validate(user)
+    return await get_user_read(db, user)

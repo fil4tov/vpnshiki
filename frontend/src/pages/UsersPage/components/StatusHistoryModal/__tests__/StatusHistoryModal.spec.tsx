@@ -22,6 +22,7 @@ const adminUser: AdminUser = {
   total_top_ups: '150.00',
   vpnStatus: 'online',
   account_status: 'active',
+  block_source: null,
   created_at: '2026-08-01T00:00:00Z',
   updated_at: '2026-08-16T11:32:00Z',
 };

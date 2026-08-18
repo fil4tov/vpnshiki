@@ -17,16 +17,19 @@ const createdAt = '2026-08-16T00:00:00Z';
 const users: AdminUser[] = [
   {
     id: 'online', name: 'online-user', role: 'user', account_status: 'paused',
+    block_source: null,
     balance: '-10.00', negative_balance_limit: '500.00', total_charged: '10.00', total_top_ups: '5.00',
     vpnStatus: 'online', created_at: createdAt, updated_at: createdAt,
   },
   {
     id: 'offline', name: 'offline-user', role: 'user', account_status: 'blocked',
+    block_source: 'admin',
     balance: '100.00', negative_balance_limit: '100.00', total_charged: '30.00', total_top_ups: '15.00',
     vpnStatus: 'offline', created_at: createdAt, updated_at: createdAt,
   },
   {
     id: 'unknown', name: 'unknown-user', role: 'user', account_status: 'active',
+    block_source: null,
     balance: '0.00', negative_balance_limit: '1000.00', total_charged: '20.00', total_top_ups: '10.00',
     vpnStatus: 'unknown', created_at: createdAt, updated_at: createdAt,
   },
@@ -34,10 +37,16 @@ const users: AdminUser[] = [
 
 describe('UsersPage', () => {
   it('shows VPN status after the account status column', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
     vi.mocked(getUsers).mockResolvedValue(users);
     useUserStore.setState({
       user: {
         id: 'admin', name: 'admin', role: 'admin', account_status: 'active',
+        block_source: null,
         balance: '0.00', negative_balance_limit: '500.00',
         created_at: createdAt, updated_at: createdAt,
       },
@@ -54,9 +63,16 @@ describe('UsersPage', () => {
     expect(await screen.findByText('online-user')).toBeInTheDocument();
     const header = screen.getAllByRole('row')[0];
     const headers = within(header).getAllByRole('columnheader').map((cell) => cell.textContent);
-    expect(headers.slice(0, 3)).toEqual(['Пользователь', 'Статус', 'VPN']);
+    expect(headers.slice(0, 4)).toEqual(['ID', 'Пользователь', 'Статус', 'VPN']);
     expect(headers).not.toContain('История списаний');
     const onlineRow = within(screen.getByText('online-user').closest('tr')!);
+    const copyIdButton = onlineRow.getByRole('button', {
+      name: 'Скопировать ID пользователя online-user',
+    });
+    expect(copyIdButton.closest('td')).toHaveAttribute('data-label', 'ID');
+    await userEvent.click(copyIdButton);
+    expect(writeText).toHaveBeenCalledWith('online');
+    expect(copyIdButton).toHaveAttribute('data-copy-state', 'copied');
     expect(onlineRow.getByText('В сети'))
       .toBeInTheDocument();
     const historyButton = onlineRow.getByRole('button', {
@@ -86,6 +102,7 @@ describe('UsersPage', () => {
     useUserStore.setState({
       user: {
         id: 'admin', name: 'admin', role: 'admin', account_status: 'active',
+        block_source: null,
         balance: '0.00', negative_balance_limit: '500.00',
         created_at: createdAt, updated_at: createdAt,
       },

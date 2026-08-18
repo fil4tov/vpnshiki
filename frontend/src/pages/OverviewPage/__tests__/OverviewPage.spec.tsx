@@ -11,7 +11,7 @@ import { OverviewPage } from '../OverviewPage';
 
 const user = {
   id: 'one', name: 'Миша', balance: '10.00', negative_balance_limit: '200.00',
-  role: 'user' as const, account_status: 'active' as const,
+  role: 'user' as const, account_status: 'active' as const, block_source: null,
   created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
 };
 
@@ -70,7 +70,7 @@ describe('OverviewPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Пополнить' }));
 
     expect(screen.getByRole('dialog', { name: 'Пополнить баланс' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Сумма пополнения, ₽')).toBeInTheDocument();
+    expect(screen.getByLabelText('Сумма платежа, ₽')).toBeInTheDocument();
   });
 
   it('covers the whole daily charge pill with a skeleton while loading', () => {
@@ -80,13 +80,26 @@ describe('OverviewPage', () => {
     expect(screen.queryByText('Суточное списание')).not.toBeInTheDocument();
   });
 
-  it('shows a blocked account without participation controls or a daily charge', () => {
-    useUserStore.setState({ user: { ...user, account_status: 'blocked' } });
+  it('directs an administrator-blocked account to the administrator', () => {
+    useUserStore.setState({
+      user: { ...user, account_status: 'blocked', block_source: 'admin' },
+    });
     renderPage();
     expect(screen.queryByRole('switch', { name: 'Активировать аккаунт' })).not.toBeInTheDocument();
     expect(screen.getByText('Аккаунт заблокирован')).toBeInTheDocument();
+    expect(screen.getByText('Обратитесь к администратору.')).toBeInTheDocument();
     expect(screen.queryByText('Суточное списание')).not.toBeInTheDocument();
     expect(getMyDailyCharge).not.toHaveBeenCalled();
+  });
+
+  it('prompts a billing-blocked account to top up its balance', () => {
+    useUserStore.setState({
+      user: { ...user, account_status: 'blocked', block_source: 'billing' },
+    });
+    renderPage();
+
+    expect(screen.getByText('Пополните баланс для разблокировки.')).toBeInTheDocument();
+    expect(screen.queryByText('Обратитесь к администратору.')).not.toBeInTheDocument();
   });
 
   it('lets a paused account activate itself and refreshes its daily charge', async () => {

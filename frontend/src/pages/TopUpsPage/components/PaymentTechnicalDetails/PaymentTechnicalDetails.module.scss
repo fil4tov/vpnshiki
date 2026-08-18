@@ -1,0 +1,13 @@
+.details { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px 20px; margin: 0; padding: 18px 20px; background: linear-gradient(135deg, color-mix(in srgb, var(--accent-soft) 44%, transparent), transparent 58%), var(--surface-muted); border: 1px solid var(--border); border-radius: 14px; }
+.details > div { min-width: 0; display: grid; align-content: start; gap: 5px; }
+.details dt { color: var(--text-muted); font-size: .61rem; text-transform: uppercase; letter-spacing: .08em; }
+.details dd { min-width: 0; margin: 0; font-size: .73rem; }
+.copyValue dd { display: flex; align-items: center; gap: 6px; }
+.copyValue code { overflow: hidden; color: var(--text); font-family: var(--font-data); font-size: .67rem; text-overflow: ellipsis; white-space: nowrap; }
+.copyValue button { display: grid; flex: 0 0 28px; width: 28px; height: 28px; place-items: center; color: var(--text-muted); cursor: pointer; background: transparent; border: 1px solid var(--border); border-radius: 8px; }
+.copyValue button:hover { color: var(--text); border-color: var(--border-strong); }
+.copyValue button:focus-visible { outline: none; box-shadow: var(--focus); }
+.money { font-family: var(--font-data); }
+
+@media (max-width: 720px) { .details { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 460px) { .details { grid-template-columns: 1fr; padding: 15px; } }
