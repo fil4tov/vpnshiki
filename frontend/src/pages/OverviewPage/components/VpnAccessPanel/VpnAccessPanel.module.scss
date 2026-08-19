@@ -50,6 +50,8 @@
   .heading { align-items: flex-end; }
   .heading h2 { font-size: 2.25rem; }
   .heading > span { padding: 7px 9px; font-size: .63rem; }
-  .unavailable, .errorState { align-items: flex-start; flex-direction: column; padding: 22px; }
+  .unavailable { min-height: 120px; gap: 14px; padding: 22px; }
+  .unavailable h3 { font-size: .92rem; line-height: 1.35; }
+  .errorState { align-items: flex-start; flex-direction: column; padding: 22px; }
   .errorState > button { width: 100%; margin-left: 0; }
 }

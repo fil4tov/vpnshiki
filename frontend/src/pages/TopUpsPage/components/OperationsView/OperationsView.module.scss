@@ -39,7 +39,8 @@
   .tableWrap td:nth-child(2) { padding-block: 10px; }
   .tableWrap td:nth-child(2)::before, .action::before, .detailsRow td::before { display: none; }
   .action { width: auto; justify-content: flex-end; }
-  .detailsRow td { padding: 0 16px 16px; }
+  .detailsRow td { width: 100%; padding: 0 0 16px; }
+  .detailsRow td > * { width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) { .action svg, .tableWrap tbody tr { transition: none; } }

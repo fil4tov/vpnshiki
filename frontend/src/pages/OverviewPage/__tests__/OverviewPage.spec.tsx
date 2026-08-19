@@ -88,6 +88,7 @@ describe('OverviewPage', () => {
     expect(screen.queryByRole('switch', { name: 'Активировать аккаунт' })).not.toBeInTheDocument();
     expect(screen.getByText('Аккаунт заблокирован')).toBeInTheDocument();
     expect(screen.getByText('Обратитесь к администратору.')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Пополнить' })).not.toBeInTheDocument();
     expect(screen.queryByText('Суточное списание')).not.toBeInTheDocument();
     expect(getMyDailyCharge).not.toHaveBeenCalled();
   });
@@ -100,6 +101,7 @@ describe('OverviewPage', () => {
 
     expect(screen.getByText('Пополните баланс для разблокировки.')).toBeInTheDocument();
     expect(screen.queryByText('Обратитесь к администратору.')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Пополнить' })).toBeInTheDocument();
   });
 
   it('lets a paused account activate itself and refreshes its daily charge', async () => {

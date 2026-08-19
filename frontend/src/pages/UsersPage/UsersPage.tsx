@@ -120,6 +120,7 @@ export function UsersPage() {
       id: 'name',
       label: 'Пользователь',
       compare: (left, right) => userCollator.compare(left.name, right.name),
+      cellClassName: styles.personCell,
       render: (user) => (
         <div className={styles.person}>
           <span>{user.name.slice(0, 1).toUpperCase()}</span>

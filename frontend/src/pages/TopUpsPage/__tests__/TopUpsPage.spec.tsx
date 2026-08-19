@@ -62,11 +62,23 @@ describe('TopUpsPage', () => {
     expect(summary.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(search.compareDocumentPosition(table) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
 
+    const userFilter = screen.getByRole('combobox', { name: 'Пользователь' });
     const statusFilter = screen.getByRole('combobox', { name: 'Статус' });
     const paymentTypeFilter = screen.getByRole('combobox', { name: 'Способ' });
     expect(screen.queryByText(/из 2 платежей/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Очистить фильтр «Пользователь»' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Очистить фильтр «Статус»' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Очистить фильтр «Способ»' })).not.toBeInTheDocument();
+
+    await user.click(userFilter);
+    expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual(['Все', 'Алина', 'Максим']);
+    await user.click(screen.getByRole('option', { name: 'Алина' }));
+    expect(within(table).getByText('Алина')).toBeInTheDocument();
+    expect(within(table).queryByText('Максим')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Очистить фильтр «Пользователь»' }));
+    expect(userFilter).toHaveTextContent('Все');
+    expect(within(table).getByText('Максим')).toBeInTheDocument();
+
     await user.click(statusFilter);
     await user.click(screen.getByRole('option', { name: 'Зачислен' }));
     expect(screen.queryByText('Алина')).not.toBeInTheDocument();
@@ -86,6 +98,7 @@ describe('TopUpsPage', () => {
     expect(screen.getByText('Максим')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Очистить всё' }));
     expect(search).toHaveValue('');
+    expect(userFilter).toHaveTextContent('Все');
     expect(screen.getByText('Алина')).toBeInTheDocument();
   });
 

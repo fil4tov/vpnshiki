@@ -68,6 +68,6 @@
 }
 
 @media (max-width: 580px) {
-  .tabs { min-width: max-content; }
-  .tab { min-height: 38px; padding-inline: 13px; font-size: .66rem; }
+  .tabs { width: 100%; min-width: max-content; }
+  .tab { min-height: 38px; flex: 1 0 auto; justify-content: center; padding-inline: 13px; font-size: .66rem; }
 }

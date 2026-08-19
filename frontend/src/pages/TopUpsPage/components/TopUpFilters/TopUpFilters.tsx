@@ -1,6 +1,7 @@
 import { FiSearch, FiX } from 'react-icons/fi';
 
 import { FieldSelect } from '#shared/ui';
+import type { FieldSelectOption } from '#shared/ui';
 
 import type {
   PaymentStatusFilter,
@@ -24,7 +25,9 @@ const paymentTypeOptions = [
 
 interface TopUpFiltersProps {
   value: TopUpFiltersValue;
+  userOptions: readonly FieldSelectOption[];
   onSearchChange: (value: string) => void;
+  onUserChange: (value: string) => void;
   onStatusChange: (value: PaymentStatusFilter) => void;
   onPaymentTypeChange: (value: PaymentTypeFilter) => void;
   onReset: () => void;
@@ -32,12 +35,15 @@ interface TopUpFiltersProps {
 
 export function TopUpFilters({
   value,
+  userOptions,
   onSearchChange,
+  onUserChange,
   onStatusChange,
   onPaymentTypeChange,
   onReset,
 }: TopUpFiltersProps) {
   const hasActiveFilters = Boolean(value.search)
+    || value.userId !== 'all'
     || value.status !== 'all'
     || value.paymentType !== 'all';
 
@@ -58,6 +64,23 @@ export function TopUpFilters({
         )}
       </label>
       <div className={styles.filterRow}>
+        <div className={styles.filterControl}>
+          <FieldSelect
+            className={styles.select}
+            label="Пользователь"
+            options={userOptions}
+            value={value.userId}
+            onChange={onUserChange}
+          />
+          {value.userId !== 'all' && (
+            <button
+              type="button"
+              className={styles.clearFilter}
+              onClick={() => onUserChange('all')}
+              aria-label="Очистить фильтр «Пользователь»"
+            ><FiX aria-hidden="true" /></button>
+          )}
+        </div>
         <div className={styles.filterControl}>
           <FieldSelect
             className={styles.select}

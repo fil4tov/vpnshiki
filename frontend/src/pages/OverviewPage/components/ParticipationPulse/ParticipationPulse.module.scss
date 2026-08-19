@@ -49,6 +49,8 @@
   .pulse { min-height: auto; padding: 22px; }
   .topLine { align-items: flex-start; flex-wrap: wrap; }
   .dailyCharge { min-height: 40px; }
+  .dailyCharge span { font-size: .62rem; }
+  .dailyCharge strong { font-size: .94rem; }
   .mainContent { grid-template-columns: 1fr; justify-items: center; gap: 26px; padding-top: 34px; text-align: center; }
   .finances { grid-column: auto; width: 100%; }
   .balance { align-items: center; justify-items: center; text-align: center; }

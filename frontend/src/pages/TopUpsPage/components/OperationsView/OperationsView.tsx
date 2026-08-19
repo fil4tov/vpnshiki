@@ -31,6 +31,7 @@ const paymentCollator = new Intl.Collator('ru-RU', { numeric: true, sensitivity:
 function matchesPayment(
   payment: AdminYooMoneyPayment,
   search: string,
+  userId: string,
   status: PaymentStatusFilter,
   paymentType: PaymentTypeFilter,
 ): boolean {
@@ -43,7 +44,9 @@ function matchesPayment(
   ].join(' ').toLocaleLowerCase('ru-RU');
   const matchesType = paymentType === 'all'
     || (paymentType === 'unknown' ? payment.payment_type === null : payment.payment_type === paymentType);
+  const matchesUser = userId === 'all' || payment.user_id === userId;
   return (!query || searchable.includes(query))
+    && matchesUser
     && (status === 'all' || payment.status === status)
     && matchesType;
 }
@@ -51,16 +54,26 @@ function matchesPayment(
 export function OperationsView({ payments }: { payments: AdminYooMoneyPayment[] }) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
+  const [userId, setUserId] = useState('all');
   const [status, setStatus] = useState<PaymentStatusFilter>('all');
   const [paymentType, setPaymentType] = useState<PaymentTypeFilter>('all');
   const filteredPayments = useMemo(
-    () => payments.filter((payment) => matchesPayment(payment, search, status, paymentType)),
-    [paymentType, payments, search, status],
+    () => payments.filter((payment) => matchesPayment(payment, search, userId, status, paymentType)),
+    [paymentType, payments, search, status, userId],
   );
+  const userOptions = useMemo(() => {
+    const users = new Map(payments.map((payment) => [payment.user_id, payment.user_name]));
+    return [
+      { value: 'all', label: 'Все' },
+      ...Array.from(users, ([value, label]) => ({ value, label }))
+        .sort((left, right) => paymentCollator.compare(left.label, right.label)),
+    ];
+  }, [payments]);
   const succeeded = payments.filter((payment) => payment.status === 'succeeded');
   const pendingCount = payments.length - succeeded.length;
   const resetFilters = () => {
     setSearch('');
+    setUserId('all');
     setStatus('all');
     setPaymentType('all');
   };
@@ -156,8 +169,10 @@ export function OperationsView({ payments }: { payments: AdminYooMoneyPayment[] 
       </SummaryCards>
 
       <TopUpFilters
-        value={{ search, status, paymentType }}
+        value={{ search, userId, status, paymentType }}
+        userOptions={userOptions}
         onSearchChange={setSearch}
+        onUserChange={setUserId}
         onStatusChange={setStatus}
         onPaymentTypeChange={setPaymentType}
         onReset={resetFilters}
