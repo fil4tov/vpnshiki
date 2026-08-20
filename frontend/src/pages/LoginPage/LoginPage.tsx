@@ -36,7 +36,7 @@ export function LoginPage() {
   return (
     <main className={styles.page}>
       <section className={styles.auth}>
-        <div className={styles.brand}><span>V</span><strong>VPNщики</strong></div>
+        <div className={styles.brand}><span>V</span><strong>VPNщики 2.0</strong></div>
         <Surface elevated className={styles.loginCard}>
           <h1 className={styles.title}>Вход</h1>
           <form className={styles.form} onSubmit={onSubmit} noValidate>

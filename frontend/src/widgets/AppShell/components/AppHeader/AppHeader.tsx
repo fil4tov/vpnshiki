@@ -20,9 +20,9 @@ export function AppHeader({ theme, toggleTheme }: AppHeaderProps) {
   return (
     <header className={styles.header}>
       <div className={styles.inner}>
-        <Link className={styles.brand} to="/" aria-label="VPNщики — личный обзор">
+        <Link className={styles.brand} to="/" aria-label="VPNщики 2.0 — личный обзор">
           <span className={styles.brandMark} aria-hidden="true">V</span>
-          <strong>VPNщики</strong>
+          <strong>VPNщики 2.0</strong>
         </Link>
         <div className={styles.actions}>
           {user?.role === 'admin' && (

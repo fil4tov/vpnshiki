@@ -51,7 +51,7 @@ describe('AppShell', () => {
     const user = userEvent.setup();
     renderShell();
 
-    expect(screen.getByRole('link', { name: 'VPNщики — личный обзор' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'VPNщики 2.0 — личный обзор' })).toBeInTheDocument();
     expect(screen.queryByRole('navigation', { name: 'Навигация администратора' })).not.toBeInTheDocument();
     expect(screen.queryByText('делим честно')).not.toBeInTheDocument();
 
