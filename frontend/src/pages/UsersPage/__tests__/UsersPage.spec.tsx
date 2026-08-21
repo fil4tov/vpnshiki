@@ -122,7 +122,7 @@ describe('UsersPage', () => {
       within(row).getByText(/^(online|offline|unknown)-user$/).textContent,
     );
     const descendingOrders: Array<[string, string[]]> = [
-      ['Пользователь', ['unknown-user', 'online-user', 'offline-user']],
+      ['Пользователь', ['offline-user', 'online-user', 'unknown-user']],
       ['Статус', ['online-user', 'offline-user', 'unknown-user']],
       ['VPN', ['unknown-user', 'offline-user', 'online-user']],
       ['Баланс', ['offline-user', 'unknown-user', 'online-user']],
