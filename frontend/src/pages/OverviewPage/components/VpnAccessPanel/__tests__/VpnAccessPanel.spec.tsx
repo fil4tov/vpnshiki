@@ -66,7 +66,26 @@ describe('VpnAccessPanel', () => {
     });
   });
 
+  it('opens and closes the connection panel accessibly', async () => {
+    const user = userEvent.setup();
+    renderPanel();
+
+    const toggle = await screen.findByRole('button', { name: /отдельные подключения/i });
+    const list = document.getElementById(toggle.getAttribute('aria-controls')!);
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(list).toHaveAttribute('inert');
+
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(list).not.toHaveAttribute('inert');
+
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(list).toHaveAttribute('inert');
+  });
+
   it('shows accessible profile tabs and only the selected profile data', async () => {
+    const user = userEvent.setup();
     renderPanel();
 
     const tabs = await screen.findByRole('tablist', { name: 'VPN-профили' });
@@ -74,12 +93,44 @@ describe('VpnAccessPanel', () => {
     expect(within(tabs).getByRole('tab', { name: 'Миша-pc' })).toHaveAttribute('aria-selected', 'false');
     expect(screen.getByText('2 профиля')).toBeInTheDocument();
     expect(screen.getByRole('tabpanel')).toHaveAccessibleName('Миша-mobile');
+    await user.click(screen.getByRole('button', { name: 'Показать отдельные подключения' }));
     expect(screen.getByText('VLESS')).toBeInTheDocument();
     expect(screen.getByText('XHTTP')).toBeInTheDocument();
     expect(screen.getByText('REALITY')).toBeInTheDocument();
     expect(screen.queryByText('Hysteria2')).not.toBeInTheDocument();
     expect(screen.queryByText(access.profiles[0].subscription_url)).not.toBeInTheDocument();
     expect(screen.queryByText(access.profiles[0].connections[0].url)).not.toBeInTheDocument();
+  });
+
+  it('sorts separate connections by protocol without mutating API data', async () => {
+    const user = userEvent.setup();
+    const connections = [
+      {
+        name: 'vless-last',
+        protocol: 'vless',
+        transport: 'xhttp',
+        security: 'reality',
+        url: 'vless://last@example.test',
+      },
+      {
+        name: 'hysteria-first',
+        protocol: 'hysteria2',
+        transport: null,
+        security: 'tls',
+        url: 'hysteria2://first@example.test',
+      },
+    ];
+    vi.mocked(getMyVpnAccess).mockResolvedValue({
+      profiles: [{ ...access.profiles[0], connections }],
+    });
+    renderPanel();
+
+    await user.click(await screen.findByRole('button', { name: 'Показать отдельные подключения' }));
+
+    const panel = screen.getByRole('article', { name: 'Отдельные подключения' });
+    expect(within(panel).getAllByRole('region').map((region) => region.getAttribute('aria-label')))
+      .toEqual(['vless-last', 'hysteria-first']);
+    expect(connections.map((connection) => connection.name)).toEqual(['vless-last', 'hysteria-first']);
   });
 
   it('switches subscription, connection actions and QR codes between profiles', async () => {
@@ -90,6 +141,7 @@ describe('VpnAccessPanel', () => {
     const subscription = await screen.findByRole('article', { name: 'Единая подписка' });
     await user.click(within(subscription).getByRole('button', { name: 'Скопировать ссылку' }));
     expect(writeText).toHaveBeenLastCalledWith(access.profiles[0].subscription_url);
+    await user.click(screen.getByRole('button', { name: 'Показать отдельные подключения' }));
 
     await user.click(screen.getByRole('tab', { name: 'Миша-pc' }));
     expect(screen.getByRole('tabpanel')).toHaveAccessibleName('Миша-pc');

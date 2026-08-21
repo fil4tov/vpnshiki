@@ -5,7 +5,7 @@ import { FiPlus } from 'react-icons/fi';
 import { getMyDailyCharge, myDailyChargeKey, useUserStore } from '#entities/user';
 import { Button } from '#shared/ui';
 
-import { ParticipationPulse, TopUpModal, VpnAccessPanel } from './components';
+import { ParticipationPulse, RecommendedVpnClients, TopUpModal, VpnAccessPanel } from './components';
 import styles from './OverviewPage.module.scss';
 
 export function OverviewPage() {
@@ -43,6 +43,7 @@ export function OverviewPage() {
           : dailyChargeQuery.data?.daily_charge ?? null}
       />
       <VpnAccessPanel accountStatus={user.account_status} />
+      {active && <RecommendedVpnClients />}
       {canTopUp && <TopUpModal open={topUpOpen} onClose={() => setTopUpOpen(false)} />}
     </div>
   );

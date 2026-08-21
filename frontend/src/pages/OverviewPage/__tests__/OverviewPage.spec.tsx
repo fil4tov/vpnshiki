@@ -37,6 +37,10 @@ function renderPage() {
 describe('OverviewPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve([{ name: 'Hiddify', url: 'https://hiddify.com/' }]),
+    }));
     useUserStore.setState({ user, status: 'authenticated' });
     vi.mocked(getMyDailyCharge).mockResolvedValue({ daily_charge: '50.00' });
     vi.mocked(getMyVpnAccess).mockResolvedValue({
@@ -48,6 +52,38 @@ describe('OverviewPage', () => {
       }],
     });
   });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('shows recommended VPN clients below the access panel', async () => {
+    renderPage();
+
+    const vpnSection = screen.getByRole('region', { name: 'Ваш VPN' });
+    const clientsSection = await screen.findByRole('region', { name: 'Приложения для подключения' });
+
+    expect(vpnSection.compareDocumentPosition(clientsSection) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(await within(clientsSection).findByRole('link', { name: /Hiddify/ })).toHaveAttribute('target', '_blank');
+  });
+
+  it.each(['paused', 'blocked'] as const)(
+    'hides recommended VPN clients when the account is %s',
+    (accountStatus) => {
+      useUserStore.setState({
+        user: {
+          ...user,
+          account_status: accountStatus,
+          block_source: accountStatus === 'blocked' ? 'billing' : null,
+        },
+      });
+
+      renderPage();
+
+      expect(screen.queryByRole('region', { name: 'Приложения для подключения' })).not.toBeInTheDocument();
+      expect(fetch).not.toHaveBeenCalled();
+    },
+  );
 
   it('shows account state and exact financial values', async () => {
     renderPage();

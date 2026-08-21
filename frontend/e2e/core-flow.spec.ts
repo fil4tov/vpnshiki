@@ -56,6 +56,7 @@ test('administrator manages a user account until deletion', async ({ page }) => 
   await expect(subscriptionCard).toBeVisible();
   const profileTabs = vpnSection.getByRole('tablist', { name: 'VPN-профили' });
   await expect(profileTabs.getByRole('tab', { name: adminMobileProfile })).toHaveAttribute('aria-selected', 'true');
+  await vpnSection.getByRole('button', { name: 'Показать отдельные подключения' }).click();
   await expect(vpnSection.getByText(`ru-fin-vless-443-web-${adminMobileProfile}`)).toBeVisible();
   await expect(vpnSection.getByText('VLESS', { exact: true })).toBeVisible();
   await expect(vpnSection.getByText('Hysteria2', { exact: true })).toBeVisible();

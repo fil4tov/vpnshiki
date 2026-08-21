@@ -119,7 +119,7 @@ export function UsersPage() {
     {
       id: 'name',
       label: 'Пользователь',
-      compare: (left, right) => userCollator.compare(left.name, right.name),
+      compare: (left, right) => userCollator.compare(right.name, left.name),
       cellClassName: styles.personCell,
       render: (user) => (
         <div className={styles.person}>

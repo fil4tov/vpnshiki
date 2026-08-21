@@ -1,9 +1,10 @@
 .backdrop { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; padding: 20px; background: rgba(5, 3, 8, 0.68); backdrop-filter: blur(9px); }
-.modal { width: min(100%, 540px); max-height: calc(100vh - 40px); overflow: auto; padding: 22px; background: var(--surface-strong); border: 1px solid var(--border-strong); border-radius: 22px; box-shadow: var(--shadow); }
-.header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
+.modal { display: grid; width: min(100%, 540px); max-height: calc(100vh - 40px); grid-template-rows: auto minmax(0, 1fr); overflow: hidden; background: var(--surface-strong); border: 1px solid var(--border-strong); border-radius: 22px; box-shadow: var(--shadow); }
+.header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 22px 22px 0; margin-bottom: 22px; }
 .headerCopy { min-width: 0; }
 .header h2 { margin: 0; font-size: clamp(2rem, 6vw, 2.5rem); line-height: 1.08; letter-spacing: -.04em; }
 .description { margin: 7px 0 0; color: var(--text-muted); font-size: .78rem; line-height: 1.45; }
+.body { min-height: 0; padding: 0 22px 22px; overflow-y: auto; overscroll-behavior: contain; scrollbar-color: var(--border-strong) transparent; scrollbar-width: thin; }
 .close { display: grid; width: 38px; height: 38px; place-items: center; color: var(--text-muted); cursor: pointer; background: var(--surface-muted); border: 1px solid var(--border); border-radius: 11px; transition: color 160ms ease, border-color 160ms ease, background 160ms ease; align-self: flex-start }
 .close:hover { color: var(--text); background: var(--accent-soft); border-color: var(--border-strong); }
 .close:active { color: var(--text); background: color-mix(in srgb, var(--accent) 24%, transparent); border-color: var(--border-strong); }

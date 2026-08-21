@@ -1,4 +1,4 @@
-import { FiGrid } from 'react-icons/fi';
+import { BsQrCodeScan } from 'react-icons/bs';
 
 import { Button } from '#shared/ui';
 
@@ -31,7 +31,7 @@ export function SubscriptionCard({ onCopy, onShowQr }: SubscriptionCardProps) {
           aria-label="Показать QR общей подписки"
           title="Показать QR"
         >
-          <FiGrid />
+          <BsQrCodeScan />
         </Button>
       </div>
     </article>

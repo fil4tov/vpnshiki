@@ -121,7 +121,7 @@ async def list_users(
             .outerjoin(charge_totals, charge_totals.c.user_id == User.id)
             .outerjoin(top_up_totals, top_up_totals.c.user_id == User.id)
             .where(User.deleted_at.is_(None))
-            .order_by(func.lower(User.name))
+            .order_by(User.created_at.desc())
         )
     ).all()
     try:

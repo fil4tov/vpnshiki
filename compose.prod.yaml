@@ -5,11 +5,18 @@ services:
     ports: !reset []
 
   postgres:
-   ports: !override
-    - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
+    ports: !override
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
 
   frontend:
     build: !reset null
     image: ${FRONTEND_IMAGE}
     ports: !override
       - "127.0.0.1:${FRONTEND_PORT:-3001}:80"
+    volumes:
+      - type: bind
+        source: /opt/vpnshiki/frontend/vpn-clients.json
+        target: /usr/share/nginx/html/vpn-clients.json
+        read_only: true
+        bind:
+          create_host_path: false

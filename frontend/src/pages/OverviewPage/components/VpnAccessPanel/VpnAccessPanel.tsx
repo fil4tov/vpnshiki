@@ -136,7 +136,6 @@ export function VpnAccessPanel({ accountStatus }: VpnAccessPanelProps) {
   const subscriptionQrTitle = multipleProfiles
     ? `Общая подписка — ${selectedProfile.label}`
     : 'Общая подписка';
-
   return (
     <section className={styles.section} aria-labelledby="vpn-heading">
       <div className={styles.heading}>

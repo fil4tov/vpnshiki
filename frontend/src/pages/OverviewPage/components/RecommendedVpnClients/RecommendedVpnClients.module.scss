@@ -1,0 +1,114 @@
+.section {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(300px, 1.25fr);
+  gap: 34px;
+  margin-top: 22px;
+  color: var(--text);
+}
+
+.intro {
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 24px;
+}
+
+.intro h2 {
+  max-width: 440px;
+  margin: 0;
+  font-size: clamp(1.55rem, 3vw, 2.45rem);
+  line-height: 1.06;
+  letter-spacing: -.045em;
+}
+
+.intro > p {
+  max-width: 260px;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: .74rem;
+  line-height: 1.5;
+}
+
+.clients {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  border-top: 1px solid var(--border);
+}
+
+.clients li { border-bottom: 1px solid var(--border); }
+
+.clients a {
+  display: grid;
+  min-height: 68px;
+  align-items: center;
+  grid-template-columns: 42px 1fr auto;
+  gap: 10px;
+  padding: 0 12px;
+  outline: none;
+  transition: color 160ms ease;
+}
+
+.clients a:hover { color: var(--accent-bright); }
+
+.clients a:focus-visible {
+  background: var(--surface-muted);
+  box-shadow: inset 0 0 0 1px var(--border-strong);
+}
+
+.index {
+  color: var(--text-muted);
+  font-family: var(--font-data);
+  font-size: .62rem;
+}
+
+.clientName {
+  font-size: 1.02rem;
+  font-weight: 700;
+  letter-spacing: -.02em;
+}
+
+.arrow { flex: 0 0 auto; }
+
+.loading {
+  display: grid;
+  gap: 10px;
+}
+
+.loading span {
+  min-height: 56px;
+  background: linear-gradient(100deg, var(--surface-muted) 20%, var(--surface) 45%, var(--surface-muted) 70%);
+  background-size: 240% 100%;
+  border-radius: 14px;
+  animation: shimmer 1.35s ease infinite;
+}
+
+.error {
+  align-self: start;
+  padding: 18px;
+  margin: 0;
+  color: var(--text-muted);
+  text-align: center;
+  background: var(--surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+@keyframes shimmer {
+  to { background-position: -140% 0; }
+}
+
+@media (max-width: 760px) {
+  .section { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 560px) {
+  .section { gap: 22px; }
+  .intro { gap: 10px; }
+  .clients a { min-height: 62px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading span { animation: none; }
+}

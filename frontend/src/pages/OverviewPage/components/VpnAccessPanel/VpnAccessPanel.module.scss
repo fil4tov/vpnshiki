@@ -2,9 +2,9 @@
 .heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; }
 .heading h2 { margin: 0; font-size: clamp(2rem, 4vw, 3rem); line-height: 1; letter-spacing: -.055em; }
 .heading > span { padding: 9px 13px; color: var(--text-muted); font-size: .72rem; border: 1px solid var(--border); border-radius: 999px; }
-.layout { display: grid; grid-template-columns: minmax(290px, .8fr) minmax(440px, 1.45fr); gap: 15px; }
+.layout { display: grid; grid-template-columns: minmax(0, 3fr) minmax(360px, 2fr); gap: 15px; }
 
-.skeleton { display: grid; min-height: 470px; grid-template-columns: minmax(290px, .8fr) minmax(440px, 1.45fr); gap: 15px; }
+.skeleton { display: grid; min-height: 470px; grid-template-columns: minmax(0, 3fr) minmax(360px, 2fr); gap: 15px; }
 .skeleton span { position: relative; overflow: hidden; background: var(--surface); border: 1px solid var(--border); border-radius: 24px; }
 .skeleton span::after { position: absolute; inset: 0; content: ''; background: linear-gradient(105deg, transparent 25%, var(--surface-muted) 42%, transparent 60%); transform: translateX(-100%); animation: shimmer 1.5s infinite; }
 

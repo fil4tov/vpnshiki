@@ -84,7 +84,7 @@ export function Modal({
             <FiX />
           </button>
         </header>
-        {children}
+        <div className={styles.body}>{children}</div>
       </section>
     </div>,
     document.body,

@@ -164,7 +164,7 @@ async def test_admin_creates_and_updates_user(
         await db.commit()
 
     users = (await client.get("/api/admin/users")).json()
-    assert [user["name"] for user in users] == ["admin", "Лена"]
+    assert [user["name"] for user in users] == ["Лена", "admin"]
     assert {user["name"]: user["total_charged"] for user in users} == {
         "admin": "0.00",
         "Лена": "30.75",
