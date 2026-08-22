@@ -27,6 +27,7 @@ tbody tr:hover { background: var(--surface-muted); }
 .transactionTotal { display: flex; width: 100%; align-items: center; justify-content: space-between; gap: 8px; }
 .historyButton { width: 34px; min-width: 34px; justify-content: center; padding: 0; }
 .vpnProfiles { white-space: nowrap; }
+.telegramId { color: var(--text-muted); font-family: var(--font-data); font-size: .74rem; font-variant-numeric: tabular-nums; letter-spacing: .02em; white-space: nowrap; }
 .negativeMoney { color: var(--danger); }
 .rowActions { display: flex; justify-content: flex-end; gap: 6px; }
 .rowActions button { display: grid; width: 34px; height: 34px; place-items: center; color: var(--text-muted); cursor: pointer; background: transparent; border: 1px solid transparent; border-radius: 9px; transition: color 160ms ease, border-color 160ms ease, background 160ms ease; }

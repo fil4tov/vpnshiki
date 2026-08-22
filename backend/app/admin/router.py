@@ -19,6 +19,11 @@ from app.billing.service import (
     restore_if_billing_blocked,
 )
 from app.errors import ApiError
+from app.notifications.dependencies import TelegramNotifier
+from app.notifications.service import (
+    blocked_balance_notification,
+    send_balance_notifications,
+)
 from app.payments.models import YooMoneyPayment, YooMoneyPaymentStatus
 from app.users.history import (
     account_block_source,
@@ -30,6 +35,7 @@ from app.users.models import AccountStatus, User, UserRole
 from app.users.schemas import (
     AdminPasswordReset,
     AdminUserCreate,
+    AdminUserMutationRead,
     AdminUserRead,
     AdminUserUpdate,
     UserChargeRead,
@@ -99,6 +105,13 @@ async def _commit_unique(db: Database) -> None:
         raise _name_taken(error) from error
 
 
+async def _admin_user_read(db: Database, user: User) -> AdminUserMutationRead:
+    user_read = await get_user_read(db, user)
+    return AdminUserMutationRead.model_validate(
+        {**user_read.model_dump(), "tg_user_id": user.tg_user_id}
+    )
+
+
 @router.get("", response_model=list[AdminUserRead])
 async def list_users(
     _admin: CurrentAdmin,
@@ -155,6 +168,7 @@ async def list_users(
         AdminUserRead.model_validate(
             {
                 **UserRead.model_validate(user).model_dump(),
+                "tg_user_id": user.tg_user_id,
                 "total_charged": total_charged,
                 "total_top_ups": total_top_ups,
                 "block_source": account_block_source(
@@ -221,12 +235,13 @@ async def list_user_status_history(
     ]
 
 
-@router.post("", response_model=UserRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=AdminUserMutationRead, status_code=status.HTTP_201_CREATED)
 async def create_user(
     payload: AdminUserCreate, admin: CurrentAdmin, db: Database
-) -> UserRead:
+) -> AdminUserMutationRead:
     user = User(
         name=payload.name,
+        tg_user_id=payload.tg_user_id,
         password_hash=hash_password(payload.password),
         balance=payload.balance,
         negative_balance_limit=payload.negative_balance_limit,
@@ -246,17 +261,18 @@ async def create_user(
         raise _name_taken(error) from error
     await _commit_unique(db)
     await db.refresh(user)
-    return await get_user_read(db, user)
+    return await _admin_user_read(db, user)
 
 
-@router.patch("/{user_id}", response_model=UserRead)
+@router.patch("/{user_id}", response_model=AdminUserMutationRead)
 async def update_user(
     user_id: UUID,
     payload: AdminUserUpdate,
     admin: CurrentAdmin,
     db: Database,
     provider: XuiProvider,
-) -> UserRead:
+    notifier: TelegramNotifier,
+) -> AdminUserMutationRead:
     user = await _get_user(db, user_id, for_update=True)
     original_status = user.account_status
     changes = payload.model_dump(exclude_unset=True)
@@ -303,6 +319,12 @@ async def update_user(
                 )
         else:
             financial_status_changed = await block_if_balance_below_limit(db, user)
+    notification = (
+        blocked_balance_notification(user)
+        if financial_status_changed
+        and user.account_status == AccountStatus.BLOCKED.value
+        else None
+    )
     if manual_status_changed and not financial_status_changed:
         assert target_status is not None
         if target_status != AccountStatus.PAUSED:
@@ -313,7 +335,9 @@ async def update_user(
     if financial_status_changed:
         request_vpn_sync_processing()
     await db.refresh(user)
-    return await get_user_read(db, user)
+    if notification is not None:
+        await send_balance_notifications(notifier, [notification])
+    return await _admin_user_read(db, user)
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -1,4 +1,5 @@
 from functools import lru_cache
+from urllib.parse import urlsplit
 
 from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -27,6 +28,14 @@ class Settings(BaseSettings):
     yoomoney_access_token: SecretStr | None = None
     yoomoney_reconciliation_enabled: bool = True
     public_app_url: str | None = None
+    tg_notification_url: str | None = Field(
+        default=None,
+        validation_alias="TG_NOTIFICATION_URL",
+    )
+    tg_notification_token: SecretStr | None = Field(
+        default=None,
+        validation_alias="TG_NOTIFICATION_TOKEN",
+    )
 
     @model_validator(mode="after")
     def validate_yoomoney(self) -> "Settings":
@@ -62,6 +71,26 @@ class Settings(BaseSettings):
         if self.public_app_url is None or not self.public_app_url.startswith("https://"):
             raise ValueError("PUBLIC_APP_URL должен быть публичным HTTPS-адресом")
         self.public_app_url = self.public_app_url.rstrip("/")
+        return self
+
+    @model_validator(mode="after")
+    def validate_telegram_notifications(self) -> "Settings":
+        url = (self.tg_notification_url or "").strip()
+        token = (
+            self.tg_notification_token.get_secret_value().strip()
+            if self.tg_notification_token is not None
+            else ""
+        )
+        if bool(url) != bool(token):
+            raise ValueError(
+                "TG_NOTIFICATION_URL и TG_NOTIFICATION_TOKEN должны быть заданы вместе"
+            )
+        if url:
+            parsed_url = urlsplit(url)
+            if parsed_url.scheme.lower() not in {"http", "https"} or not parsed_url.hostname:
+                raise ValueError("TG_NOTIFICATION_URL должен быть HTTP(S)-адресом")
+        self.tg_notification_url = url or None
+        self.tg_notification_token = SecretStr(token) if token else None
         return self
 
 

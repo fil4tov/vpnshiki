@@ -25,6 +25,18 @@ from app.tariff_plans.models import TariffPlan
 from app.users.models import AccountStatus, User
 
 
+class RecordingNotificationSender:
+    def __init__(self, *, fail: bool = False) -> None:
+        self.calls: list[tuple[str, str]] = []
+        self.fail = fail
+
+    async def send(self, tg_user_id: str, text: str) -> bool:
+        self.calls.append((tg_user_id, text))
+        if self.fail:
+            raise RuntimeError("notification service is offline")
+        return True
+
+
 async def test_vpn_sync_request_wakes_scheduler_without_polling_delay(
     session_factory,
     monkeypatch,
@@ -111,6 +123,7 @@ async def test_daily_billing_is_idempotent_and_blocks_below_limit(
             password_hash="unused",
             balance=Decimal("0.00"),
             negative_balance_limit=Decimal("10.00"),
+            tg_user_id="258373830",
             created_at=created_at,
         )
         db.add_all(
@@ -125,14 +138,18 @@ async def test_daily_billing_is_idempotent_and_blocks_below_limit(
         )
         await db.commit()
 
-        run = await process_billing_date(db, billing_date)
-        repeated_run = await process_billing_date(db, billing_date)
+        sender = RecordingNotificationSender()
+        run = await process_billing_date(db, billing_date, sender)
+        repeated_run = await process_billing_date(db, billing_date, sender)
 
         assert repeated_run.id == run.id
         assert run.daily_charge == Decimal("50.00")
         assert run.active_users_count == 2
         assert run.charged_users_count == 2
         assert run.blocked_users_count == 1
+        assert len(sender.calls) == 1
+        assert sender.calls[0][0] == "258373830"
+        assert "Аккаунт заблокирован" in sender.calls[0][1]
         assert await db.scalar(select(func.count()).select_from(BillingRun)) == 1
         assert await db.scalar(select(func.count()).select_from(UserDailyCharge)) == 2
 
@@ -218,7 +235,9 @@ async def test_catch_up_processes_every_day_from_current_plan_start(
         user = await db.get(User, admin.id)
         assert user is not None
         user.created_at = datetime(2026, 7, 31, 12, tzinfo=UTC)
-        user.balance = Decimal("1000.00")
+        user.balance = Decimal("0.00")
+        user.negative_balance_limit = Decimal("250.00")
+        user.tg_user_id = "258373830"
         db.add(
             TariffPlan(
                 name="TP_01.08.2026",
@@ -228,16 +247,54 @@ async def test_catch_up_processes_every_day_from_current_plan_start(
         )
         await db.commit()
 
-        runs = await catch_up_billing(db, date(2026, 8, 3))
+        sender = RecordingNotificationSender()
+        runs = await catch_up_billing(db, date(2026, 8, 3), sender)
+        repeated_runs = await catch_up_billing(db, date(2026, 8, 3), sender)
 
         assert [run.billing_date for run in runs] == [
             date(2026, 8, 1),
             date(2026, 8, 2),
             date(2026, 8, 3),
         ]
+        assert [run.id for run in repeated_runs] == [run.id for run in runs]
         assert await db.scalar(select(func.count()).select_from(UserDailyCharge)) == 3
         await db.refresh(user)
-        assert user.balance == Decimal("700.00")
+        assert user.balance == Decimal("-300.00")
+        assert len(sender.calls) == 1
+        assert sender.calls[0][0] == "258373830"
+        assert "Аккаунт заблокирован" in sender.calls[0][1]
+        assert "-300,00 ₽" in sender.calls[0][1]
+
+
+async def test_notification_failure_does_not_rollback_billing(
+    session_factory,
+    admin,
+) -> None:
+    billing_date = date(2026, 8, 16)
+    async with session_factory() as db:
+        user = await db.get(User, admin.id)
+        assert user is not None
+        user.created_at = datetime(2026, 8, 15, 12, tzinfo=UTC)
+        user.balance = Decimal("0.00")
+        user.negative_balance_limit = Decimal("300.00")
+        user.tg_user_id = "258373830"
+        db.add(
+            TariffPlan(
+                name="TP_16.08.2026",
+                monthly_amount=Decimal("620.00"),
+                start_date=billing_date,
+            )
+        )
+        await db.commit()
+
+        sender = RecordingNotificationSender(fail=True)
+        run = await process_billing_date(db, billing_date, sender)
+
+        await db.refresh(user)
+        assert run.status == "completed"
+        assert user.balance == Decimal("-20.00")
+        assert len(sender.calls) == 1
+        assert await db.scalar(select(func.count()).select_from(UserDailyCharge)) == 1
 
 
 class EventuallyAvailableProvider:

@@ -5,6 +5,7 @@ from datetime import datetime, time, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from app.config import Settings
+from app.notifications.client import TelegramNotificationClient
 from app.vpn_access.service import XuiClient
 
 from .service import MOSCOW, catch_up_billing, process_vpn_sync_jobs, sync_paused_profiles
@@ -26,6 +27,7 @@ class BillingScheduler:
     ) -> None:
         self._session_factory = session_factory
         self._provider = XuiClient(settings)
+        self._notifier = TelegramNotificationClient(settings)
         self._stop = asyncio.Event()
         self._tasks: list[asyncio.Task[None]] = []
 
@@ -52,7 +54,7 @@ class BillingScheduler:
         while not self._stop.is_set():
             try:
                 async with self._session_factory() as db:
-                    await catch_up_billing(db)
+                    await catch_up_billing(db, None, self._notifier)
                     queued_syncs = await sync_paused_profiles(db, self._provider)
                     if queued_syncs:
                         request_vpn_sync_processing()

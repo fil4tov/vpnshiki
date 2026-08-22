@@ -42,7 +42,7 @@ describe('TariffPlansPage', () => {
     vi.mocked(getTariffPlans).mockResolvedValue(plans);
     vi.mocked(getUsers).mockResolvedValue([
       {
-        id: 'admin', name: 'admin', role: 'admin', balance: '0.00', negative_balance_limit: '0.00',
+        id: 'admin', name: 'admin', role: 'admin', balance: '0.00', negative_balance_limit: '0.00', tgUserId: null,
         total_charged: '0.00', total_top_ups: '0.00', vpnProfiles: [], account_status: 'active', block_source: null, created_at: '2026-08-01T00:00:00Z',
         updated_at: '2026-08-01T00:00:00Z',
       },

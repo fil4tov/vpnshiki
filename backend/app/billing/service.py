@@ -1,5 +1,6 @@
 import logging
 from calendar import monthrange
+from dataclasses import dataclass
 from datetime import UTC, date, datetime, time, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from uuid import UUID
@@ -10,6 +11,13 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from sqlalchemy.orm import aliased
 
 from app.errors import ApiError
+from app.notifications.service import (
+    BalanceNotification,
+    NotificationSender,
+    daily_balance_notification,
+    merge_balance_notification,
+    send_balance_notifications,
+)
 from app.tariff_plans.models import TariffPlan
 from app.users.models import AccountStatus, User
 from app.vpn_access.service import XuiClient, profile_matches
@@ -27,6 +35,12 @@ logger = logging.getLogger(__name__)
 MOSCOW = ZoneInfo("Europe/Moscow")
 BILLING_LOCK_ID = 846_202_608_16
 RETRY_INTERVAL = timedelta(minutes=1)
+
+
+@dataclass(frozen=True, slots=True)
+class BillingDateResult:
+    run: BillingRun
+    notifications: list[BalanceNotification]
 
 
 def moscow_today() -> date:
@@ -283,7 +297,7 @@ async def _billing_lock(db: AsyncSession) -> None:
         )
 
 
-async def process_billing_date(db: AsyncSession, billing_date: date) -> BillingRun:
+async def _process_billing_date(db: AsyncSession, billing_date: date) -> BillingDateResult:
     try:
         await _billing_lock(db)
         run = await db.scalar(
@@ -295,7 +309,7 @@ async def process_billing_date(db: AsyncSession, billing_date: date) -> BillingR
             and run.status == BillingRunStatus.COMPLETED.value
             and (run.tariff_plan_id is not None or plan is None)
         ):
-            return run
+            return BillingDateResult(run=run, notifications=[])
         now = datetime.now(UTC)
         if run is None:
             run = BillingRun(
@@ -319,7 +333,7 @@ async def process_billing_date(db: AsyncSession, billing_date: date) -> BillingR
             run.status = BillingRunStatus.COMPLETED.value
             run.completed_at = now
             await db.commit()
-            return run
+            return BillingDateResult(run=run, notifications=[])
 
         run.tariff_plan_id = plan.id
         await _ensure_status_baselines(db, plan.start_date)
@@ -331,7 +345,7 @@ async def process_billing_date(db: AsyncSession, billing_date: date) -> BillingR
             run.status = BillingRunStatus.COMPLETED.value
             run.completed_at = now
             await db.commit()
-            return run
+            return BillingDateResult(run=run, notifications=[])
 
         amount = (
             plan.monthly_amount
@@ -341,7 +355,9 @@ async def process_billing_date(db: AsyncSession, billing_date: date) -> BillingR
         run.daily_charge = amount
 
         blocked = 0
+        notifications: dict[UUID, BalanceNotification] = {}
         for user in active_users:
+            balance_before = user.balance
             user.balance -= amount
             db.add(
                 UserDailyCharge(
@@ -351,7 +367,8 @@ async def process_billing_date(db: AsyncSession, billing_date: date) -> BillingR
                     created_at=cutoff,
                 )
             )
-            if user.balance < -user.negative_balance_limit:
+            became_blocked = user.balance < -user.negative_balance_limit
+            if became_blocked:
                 blocked += 1
                 db.add(
                     UserStatusHistory(
@@ -366,13 +383,22 @@ async def process_billing_date(db: AsyncSession, billing_date: date) -> BillingR
                 if not await _has_later_status(db, user.id, cutoff):
                     user.account_status = AccountStatus.BLOCKED.value
                 await queue_vpn_sync(db, user.id, False)
+            merge_balance_notification(
+                notifications,
+                daily_balance_notification(
+                    user,
+                    balance_before=balance_before,
+                    daily_charge=amount,
+                    became_blocked=became_blocked,
+                ),
+            )
 
         run.charged_users_count = len(active_users)
         run.blocked_users_count = blocked
         run.status = BillingRunStatus.COMPLETED.value
         run.completed_at = datetime.now(UTC)
         await db.commit()
-        return run
+        return BillingDateResult(run=run, notifications=list(notifications.values()))
     except Exception as error:
         await db.rollback()
         try:
@@ -395,16 +421,40 @@ async def process_billing_date(db: AsyncSession, billing_date: date) -> BillingR
         raise
 
 
-async def catch_up_billing(db: AsyncSession, through_date: date | None = None) -> list[BillingRun]:
+async def process_billing_date(
+    db: AsyncSession,
+    billing_date: date,
+    sender: NotificationSender | None = None,
+) -> BillingRun:
+    result = await _process_billing_date(db, billing_date)
+    if sender is not None:
+        await send_balance_notifications(sender, result.notifications)
+    return result.run
+
+
+async def catch_up_billing(
+    db: AsyncSession,
+    through_date: date | None = None,
+    sender: NotificationSender | None = None,
+) -> list[BillingRun]:
     target_date = through_date or moscow_today()
     current_plan = await _plan_for_date(db, target_date)
+    notifications: dict[UUID, BalanceNotification] = {}
     if current_plan is None:
-        return [await process_billing_date(db, target_date)]
+        result = await _process_billing_date(db, target_date)
+        if sender is not None:
+            await send_balance_notifications(sender, result.notifications)
+        return [result.run]
     runs: list[BillingRun] = []
     billing_date = current_plan.start_date
     while billing_date <= target_date:
-        runs.append(await process_billing_date(db, billing_date))
+        result = await _process_billing_date(db, billing_date)
+        runs.append(result.run)
+        for notification in result.notifications:
+            merge_balance_notification(notifications, notification)
         billing_date += timedelta(days=1)
+    if sender is not None:
+        await send_balance_notifications(sender, list(notifications.values()))
     return runs
 
 

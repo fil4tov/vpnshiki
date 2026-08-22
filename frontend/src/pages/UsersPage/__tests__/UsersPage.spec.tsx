@@ -17,6 +17,7 @@ const createdAt = '2026-08-16T00:00:00Z';
 const users: AdminUser[] = [
   {
     id: 'online', name: 'online-user', role: 'user', account_status: 'paused',
+    tgUserId: '258373830',
     block_source: null,
     balance: '-10.00', negative_balance_limit: '500.00', total_charged: '10.00', total_top_ups: '5.00',
     vpnProfiles: [
@@ -27,12 +28,14 @@ const users: AdminUser[] = [
   },
   {
     id: 'offline', name: 'offline-user', role: 'user', account_status: 'blocked',
+    tgUserId: null,
     block_source: 'admin',
     balance: '100.00', negative_balance_limit: '100.00', total_charged: '30.00', total_top_ups: '15.00',
     vpnProfiles: [], created_at: createdAt, updated_at: createdAt,
   },
   {
     id: 'unknown', name: 'unknown-user', role: 'user', account_status: 'active',
+    tgUserId: null,
     block_source: null,
     balance: '0.00', negative_balance_limit: '1000.00', total_charged: '20.00', total_top_ups: '10.00',
     vpnProfiles: null, created_at: createdAt, updated_at: createdAt,
@@ -68,6 +71,7 @@ describe('UsersPage', () => {
     const header = screen.getAllByRole('row')[0];
     const headers = within(header).getAllByRole('columnheader').map((cell) => cell.textContent);
     expect(headers.slice(0, 4)).toEqual(['ID', 'Пользователь', 'Статус', 'VPN']);
+    expect(headers.slice(-2)).toEqual(['TG ID', 'Действия']);
     expect(headers).not.toContain('История списаний');
     const onlineRow = within(screen.getByText('online-user').closest('tr')!);
     const copyIdButton = onlineRow.getByRole('button', {
@@ -104,6 +108,9 @@ describe('UsersPage', () => {
     });
     expect(topUpHistoryButton).toHaveTextContent('');
     expect(topUpHistoryButton.closest('td')).toHaveAttribute('data-label', 'Всего пополнений');
+    const telegramId = onlineRow.getByText('258373830');
+    expect(telegramId.closest('td')).toHaveAttribute('data-label', 'TG ID');
+    expect(within(screen.getByText('offline-user').closest('tr')!).getByText('—')).toBeInTheDocument();
     const statusHistoryButton = onlineRow.getByRole('button', {
       name: 'Открыть историю статуса online-user',
     });
@@ -174,6 +181,11 @@ describe('UsersPage', () => {
 
     await user.click(totalTopUpsSort);
     expect(totalTopUpsSort.closest('th')).toHaveAttribute('aria-sort', 'none');
+    expect(rowNames()).toEqual(['online-user', 'offline-user', 'unknown-user']);
+
+    const telegramIdSort = screen.getByRole('button', { name: 'TG ID' });
+    await user.click(telegramIdSort);
+    expect(telegramIdSort.closest('th')).toHaveAttribute('aria-sort', 'descending');
     expect(rowNames()).toEqual(['online-user', 'offline-user', 'unknown-user']);
   });
 });

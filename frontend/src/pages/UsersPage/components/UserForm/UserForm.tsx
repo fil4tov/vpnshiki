@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 
-import type { AccountStatus, AdminUserPayload, AdminUserUpdatePayload, User } from '#entities/user';
+import type { AccountStatus, AdminUser, AdminUserPayload, AdminUserUpdatePayload } from '#entities/user';
 import { ApiError } from '#shared/api';
 import { Button, FieldSelect, GeneratePasswordButton, PasswordField, TextField } from '#shared/ui';
 import type { FieldSelectOption } from '#shared/ui';
@@ -15,22 +15,34 @@ interface FormValues {
   negativeBalanceLimit: string;
   role: 'admin' | 'user';
   accountStatus: AccountStatus;
+  tgUserId: string;
 }
 
 interface UserFormProps {
-  user?: User;
+  user?: AdminUser;
   onCancel: () => void;
   onSubmit: (payload: AdminUserPayload | AdminUserUpdatePayload) => Promise<void>;
 }
 
-const defaults = (user?: User): FormValues => ({
+const defaults = (user?: AdminUser): FormValues => ({
   name: user?.name ?? '',
   password: '',
   balance: user?.balance ?? '0.00',
   negativeBalanceLimit: user?.negative_balance_limit ?? '300.00',
   role: user?.role ?? 'user',
   accountStatus: user?.account_status ?? 'active',
+  tgUserId: user?.tgUserId ?? '',
 });
+
+const validateTgUserId = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return true;
+  if (!/^\d+$/.test(trimmed)) return 'ID должен содержать только цифры';
+  const normalized = trimmed.replace(/^0+/, '') || '0';
+  if (normalized === '0') return 'ID должен быть положительным';
+  if (normalized.length > 20) return 'Максимум 20 цифр';
+  return true;
+};
 
 const statusDescriptions: Record<AccountStatus, string> = {
   active: 'Участвует в общем расчёте',
@@ -67,6 +79,7 @@ export function UserForm({ user, onCancel, onSubmit }: UserFormProps) {
       negative_balance_limit: values.negativeBalanceLimit,
       role: values.role,
       account_status: values.accountStatus,
+      tgUserId: values.tgUserId.trim() || null,
       ...(!user ? { password: values.password } : {}),
     } as AdminUserPayload | AdminUserUpdatePayload;
     try {
@@ -87,6 +100,13 @@ export function UserForm({ user, onCancel, onSubmit }: UserFormProps) {
   return (
     <form className={styles.form} onSubmit={submit} noValidate>
       <TextField label="Имя" placeholder="username" error={errors.name?.message} {...register('name', { required: 'Введите имя', minLength: { value: 2, message: 'Минимум 2 символа' } })} />
+      <TextField
+        label="Telegram User ID"
+        inputMode="numeric"
+        autoComplete="off"
+        error={errors.tgUserId?.message}
+        {...register('tgUserId', { validate: validateTgUserId })}
+      />
       {!user && (
         <PasswordField
           label="Начальный пароль"

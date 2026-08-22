@@ -53,7 +53,7 @@ export function UsersPage() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [createOpen, setCreateOpen] = useState(false);
-  const [editing, setEditing] = useState<User | null>(null);
+  const [editing, setEditing] = useState<AdminUser | null>(null);
   const [resetting, setResetting] = useState<User | null>(null);
   const [historyUser, setHistoryUser] = useState<AdminUser | null>(null);
   const [topUpHistoryUser, setTopUpHistoryUser] = useState<AdminUser | null>(null);
@@ -199,6 +199,14 @@ export function UsersPage() {
           ><FiClock aria-hidden="true" /></TableActionButton>
         </div>
       ),
+    },
+    {
+      id: 'tgUserId',
+      label: 'TG ID',
+      compare: (left, right) => (left.tgUserId ? 1 : 0) - (right.tgUserId ? 1 : 0)
+        || userCollator.compare(left.tgUserId ?? '', right.tgUserId ?? ''),
+      cellClassName: styles.telegramId,
+      render: (user) => user.tgUserId ?? '—',
     },
     {
       id: 'actions',

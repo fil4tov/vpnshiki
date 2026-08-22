@@ -17,6 +17,7 @@ export interface User {
 }
 
 export interface AdminUser extends User {
+  tgUserId: string | null;
   total_charged: string;
   total_top_ups: string;
   vpnProfiles: Array<{
@@ -66,6 +67,7 @@ export interface AdminUserPayload {
   negative_balance_limit: string;
   role: UserRole;
   account_status: AccountStatus;
+  tgUserId: string | null;
 }
 
 export type AdminUserUpdatePayload = Omit<AdminUserPayload, 'password'>;

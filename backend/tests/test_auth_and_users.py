@@ -18,6 +18,7 @@ from app.billing.models import (
 )
 from app.errors import ApiError
 from app.main import app
+from app.notifications.dependencies import get_telegram_notification_client
 from app.payments.models import YooMoneyPayment, YooMoneyPaymentStatus
 from app.tariff_plans.models import TariffPlan
 from app.users.models import AccountStatus, User
@@ -52,6 +53,17 @@ class FailingStatusXuiClient:
             message="VPN-панель временно недоступна",
         )
 
+
+class RecordingNotificationClient:
+    def __init__(self, *, fail: bool = False) -> None:
+        self.calls: list[tuple[str, str]] = []
+        self.fail = fail
+
+    async def send(self, tg_user_id: str, text: str) -> bool:
+        self.calls.append((tg_user_id, text))
+        if self.fail:
+            raise RuntimeError("notification service is offline")
+        return True
 
 async def login(client: AsyncClient, name: str = "admin", password: str = "admin-password"):
     return await client.post("/api/auth/login", json={"name": name, "password": password})
@@ -99,11 +111,13 @@ async def test_admin_creates_and_updates_user(
             "negative_balance_limit": "300.00",
             "role": "user",
             "account_status": "active",
+            "tgUserId": "000258373830",
         },
     )
     assert created.status_code == 201
     user_id = UUID(created.json()["id"])
     assert created.json()["balance"] == "-25.40"
+    assert created.json()["tgUserId"] == "258373830"
 
     updated = await client.patch(
         f"/api/admin/users/{user_id}",
@@ -112,6 +126,7 @@ async def test_admin_creates_and_updates_user(
     assert updated.status_code == 200
     assert updated.json()["account_status"] == "blocked"
     assert updated.json()["balance"] == "12.34"
+    assert updated.json()["tgUserId"] == "258373830"
     assert provider.updates == [("web-Лена", False)]
 
     async with session_factory() as db:
@@ -173,6 +188,10 @@ async def test_admin_creates_and_updates_user(
 
     users = (await client.get("/api/admin/users")).json()
     assert [user["name"] for user in users] == ["Лена", "admin"]
+    assert {user["name"]: user["tgUserId"] for user in users} == {
+        "admin": None,
+        "Лена": "258373830",
+    }
     assert {user["name"]: user["total_charged"] for user in users} == {
         "admin": "0.00",
         "Лена": "30.75",
@@ -201,12 +220,56 @@ async def test_admin_creates_and_updates_user(
     assert [entry["created_at"][:10] for entry in top_ups] == ["2026-08-04", "2026-08-03"]
 
     await client.post("/api/auth/logout")
-    await login(client, "Лена", "strong-password")
+    login_response = await login(client, "Лена", "strong-password")
+    assert "tgUserId" not in login_response.json()
+    assert "tg_user_id" not in login_response.json()
+    assert "tgUserId" not in (await client.get("/api/auth/me")).json()
     own_charges = (await client.get("/api/users/me/charges")).json()
     own_top_ups = (await client.get("/api/users/me/top-ups")).json()
     assert [entry["id"] for entry in own_charges] == [entry["id"] for entry in history]
     assert [entry["id"] for entry in own_top_ups] == [entry["id"] for entry in top_ups]
     assert (await client.get(f"/api/admin/users/{user_id}/top-ups")).status_code == 403
+
+
+async def test_admin_validates_normalizes_and_clears_telegram_user_id(
+    client: AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    await login(client)
+
+    numeric = await client.post(
+        "/api/admin/users",
+        json={"name": "Числовой ID", "password": "user-password", "tgUserId": 123},
+    )
+    invalid = await client.post(
+        "/api/admin/users",
+        json={"name": "Невалидный ID", "password": "user-password", "tgUserId": "-123"},
+    )
+    created = await client.post(
+        "/api/admin/users",
+        json={
+            "name": "Очищаемый ID",
+            "password": "user-password",
+            "tgUserId": " 000123456789 ",
+        },
+    )
+
+    assert numeric.status_code == 422
+    assert invalid.status_code == 422
+    assert created.status_code == 201
+    assert created.json()["tgUserId"] == "123456789"
+
+    user_id = UUID(created.json()["id"])
+    cleared = await client.patch(
+        f"/api/admin/users/{user_id}",
+        json={"tgUserId": ""},
+    )
+
+    assert cleared.status_code == 200
+    assert cleared.json()["tgUserId"] is None
+    async with session_factory() as db:
+        user = await db.get(User, user_id)
+        assert user is not None and user.tg_user_id is None
 
 
 async def test_admin_reads_user_status_history_with_actor(
@@ -460,6 +523,85 @@ async def test_financial_admin_edit_blocks_active_and_paused_accounts(
     assert (await client.get("/api/auth/me")).json()["block_source"] == (
         StatusChangeSource.BILLING.value
     )
+
+
+async def test_admin_financial_block_sends_notification_but_manual_block_does_not(
+    client: AsyncClient,
+) -> None:
+    provider = FakeStatusXuiClient()
+    notifier = RecordingNotificationClient()
+    app.dependency_overrides[get_xui_client] = lambda: provider
+    app.dependency_overrides[get_telegram_notification_client] = lambda: notifier
+    await login(client)
+    automatic = await client.post(
+        "/api/admin/users",
+        json={
+            "name": "Автоматическая блокировка",
+            "password": "user-password",
+            "balance": "0.00",
+            "negative_balance_limit": "300.00",
+            "tgUserId": "258373830",
+        },
+    )
+    manual = await client.post(
+        "/api/admin/users",
+        json={
+            "name": "Ручная блокировка",
+            "password": "user-password",
+            "tgUserId": "258373831",
+        },
+    )
+
+    automatic_response = await client.patch(
+        f"/api/admin/users/{automatic.json()['id']}",
+        json={"balance": "-300.01"},
+    )
+    manual_response = await client.patch(
+        f"/api/admin/users/{manual.json()['id']}",
+        json={"account_status": "blocked"},
+    )
+
+    assert automatic_response.status_code == 200
+    assert manual_response.status_code == 200
+    assert len(notifier.calls) == 1
+    assert notifier.calls[0][0] == "258373830"
+    assert "Аккаунт заблокирован" in notifier.calls[0][1]
+
+
+async def test_notification_failure_does_not_rollback_admin_financial_block(
+    client: AsyncClient,
+    session_factory: async_sessionmaker[AsyncSession],
+) -> None:
+    provider = FakeStatusXuiClient()
+    notifier = RecordingNotificationClient(fail=True)
+    app.dependency_overrides[get_xui_client] = lambda: provider
+    app.dependency_overrides[get_telegram_notification_client] = lambda: notifier
+    await login(client)
+    created = await client.post(
+        "/api/admin/users",
+        json={
+            "name": "Ошибка уведомления",
+            "password": "user-password",
+            "balance": "0.00",
+            "negative_balance_limit": "300.00",
+            "tgUserId": "258373830",
+        },
+    )
+    user_id = UUID(created.json()["id"])
+
+    response = await client.patch(
+        f"/api/admin/users/{user_id}",
+        json={"balance": "-300.01"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["account_status"] == AccountStatus.BLOCKED.value
+    assert len(notifier.calls) == 1
+    async with session_factory() as db:
+        user = await db.get(User, user_id)
+        assert user is not None
+        assert user.balance == Decimal("-300.01")
+        assert user.account_status == AccountStatus.BLOCKED.value
 
 
 async def test_financial_admin_edit_allows_exact_negative_limit(

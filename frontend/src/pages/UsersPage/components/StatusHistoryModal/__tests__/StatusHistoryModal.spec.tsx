@@ -16,6 +16,7 @@ const adminUser: AdminUser = {
   id: 'user-one',
   name: 'Марина',
   role: 'user',
+  tgUserId: null,
   balance: '100.00',
   negative_balance_limit: '500.00',
   total_charged: '96.78',

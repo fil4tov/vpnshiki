@@ -4,13 +4,45 @@ from enum import StrEnum
 from typing import Annotated
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_serializer
+from pydantic import (
+    BaseModel,
+    BeforeValidator,
+    ConfigDict,
+    Field,
+    StringConstraints,
+    field_serializer,
+)
+from pydantic_core import PydanticCustomError
 
 from app.users.models import AccountStatus, UserRole
 
 Name = Annotated[str, StringConstraints(strip_whitespace=True, min_length=2, max_length=64)]
 Password = Annotated[str, StringConstraints(min_length=8, max_length=128)]
 Money = Annotated[Decimal, Field(max_digits=14, decimal_places=2)]
+
+
+def normalize_tg_user_id(value: object) -> str | None:
+    if value is None:
+        return None
+    if not isinstance(value, str):
+        raise PydanticCustomError(
+            "string_type",
+            "Telegram User ID должен быть строкой",
+        )
+    stripped = value.strip()
+    if not stripped:
+        return None
+    if not stripped.isascii() or not stripped.isdecimal():
+        raise ValueError("Telegram User ID должен содержать только цифры")
+    normalized = str(int(stripped))
+    if normalized == "0":
+        raise ValueError("Telegram User ID должен быть положительным")
+    if len(normalized) > 20:
+        raise ValueError("Telegram User ID должен содержать не более 20 цифр")
+    return normalized
+
+
+TelegramUserId = Annotated[str | None, BeforeValidator(normalize_tg_user_id)]
 
 
 class VpnProfileStatus(StrEnum):
@@ -30,7 +62,7 @@ class AccountBlockSource(StrEnum):
 
 
 class UserRead(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, populate_by_name=True)
 
     id: UUID
     name: str
@@ -47,7 +79,11 @@ class UserRead(BaseModel):
         return f"{value:.2f}"
 
 
-class AdminUserRead(UserRead):
+class AdminUserMutationRead(UserRead):
+    tg_user_id: str | None = Field(default=None, serialization_alias="tgUserId")
+
+
+class AdminUserRead(AdminUserMutationRead):
     total_charged: Decimal
     total_top_ups: Decimal
     vpn_profiles: list[VpnProfileSummaryRead] | None = Field(
@@ -107,20 +143,32 @@ class PasswordChange(BaseModel):
 
 
 class AdminUserCreate(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     name: Name
     password: Password
     balance: Money = Decimal("0.00")
     negative_balance_limit: Annotated[Money, Field(ge=0)] = Decimal("0.00")
     role: UserRole = UserRole.USER
     account_status: AccountStatus = AccountStatus.ACTIVE
+    tg_user_id: TelegramUserId = Field(
+        default=None,
+        validation_alias="tgUserId",
+    )
 
 
 class AdminUserUpdate(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     name: Name | None = None
     balance: Money | None = None
     negative_balance_limit: Annotated[Money, Field(ge=0)] | None = None
     role: UserRole | None = None
     account_status: AccountStatus | None = None
+    tg_user_id: TelegramUserId = Field(
+        default=None,
+        validation_alias="tgUserId",
+    )
 
 
 class AdminPasswordReset(BaseModel):
