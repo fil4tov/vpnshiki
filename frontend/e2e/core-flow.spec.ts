@@ -191,7 +191,7 @@ test('administrator manages a user account until deletion', async ({ page }) => 
   await page.getByLabel('Пароль', { exact: true }).fill(nextPassword);
   await page.getByRole('button', { name: 'Войти' }).click();
   await expect(page.getByText('Аккаунт заблокирован')).toBeVisible();
-  await expect(page.getByText('VPN доступен только для активного аккаунта')).toBeVisible();
+  await expect(page.getByText('VPN недоступен')).toBeVisible();
   await expect(page.getByRole('switch', { name: 'Активировать аккаунт' })).toHaveCount(0);
   expect(blockedVpnRequests).toBe(0);
   page.off('request', countBlockedVpnRequests);
