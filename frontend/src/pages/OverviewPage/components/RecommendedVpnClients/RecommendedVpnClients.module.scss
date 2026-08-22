@@ -1,38 +1,22 @@
 .section {
-  display: grid;
-  grid-template-columns: var(--vpn-content-columns);
-  gap: var(--vpn-content-gap);
   margin-top: 22px;
   color: var(--text);
 }
 
-.intro {
-  display: flex;
-  align-items: flex-start;
-  flex-direction: column;
-  justify-content: flex-start;
-  gap: 24px;
+.catalog {
+  min-width: 0;
 }
 
-.intro h2 {
-  max-width: 440px;
+.catalog h2 {
   margin: 0;
   font-size: clamp(1.55rem, 3vw, 2.45rem);
   line-height: 1.06;
   letter-spacing: -.045em;
 }
 
-.intro > p {
-  max-width: 260px;
-  margin: 0;
-  color: var(--text-muted);
-  font-size: .74rem;
-  line-height: 1.5;
-}
-
 .clients {
   padding: 0;
-  margin: 0;
+  margin: 36px 0 0;
   list-style: none;
   border-top: 1px solid var(--border);
 }
@@ -74,6 +58,7 @@
 .loading {
   display: grid;
   gap: 10px;
+  margin-top: 36px;
 }
 
 .loading span {
@@ -87,7 +72,7 @@
 .error {
   align-self: start;
   padding: 18px;
-  margin: 0;
+  margin: 36px 0 0;
   color: var(--text-muted);
   text-align: center;
   background: var(--surface-muted);
@@ -100,8 +85,9 @@
 }
 
 @media (max-width: 560px) {
-  .section { gap: 22px; }
-  .intro { gap: 10px; }
+  .clients,
+  .loading,
+  .error { margin-top: 24px; }
   .clients a { min-height: 62px; }
 }
 

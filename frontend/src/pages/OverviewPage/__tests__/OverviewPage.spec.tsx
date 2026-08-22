@@ -61,7 +61,7 @@ describe('OverviewPage', () => {
     renderPage();
 
     const vpnSection = screen.getByRole('region', { name: 'Ваш VPN' });
-    const clientsSection = await screen.findByRole('region', { name: 'Приложения для подключения' });
+    const clientsSection = await screen.findByRole('region', { name: 'Рекомендуемые VPN-клиенты' });
 
     expect(vpnSection.compareDocumentPosition(clientsSection) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(await within(clientsSection).findByRole('link', { name: /Hiddify/ })).toHaveAttribute('target', '_blank');
@@ -80,7 +80,7 @@ describe('OverviewPage', () => {
 
       renderPage();
 
-      expect(screen.queryByRole('region', { name: 'Приложения для подключения' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('region', { name: 'Рекомендуемые VPN-клиенты' })).not.toBeInTheDocument();
       expect(fetch).not.toHaveBeenCalled();
     },
   );
