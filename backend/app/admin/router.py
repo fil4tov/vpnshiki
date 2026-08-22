@@ -36,12 +36,35 @@ from app.users.schemas import (
     UserRead,
     UserStatusHistoryRead,
     UserTopUpRead,
-    VpnStatus,
+    VpnProfileStatus,
+    VpnProfileSummaryRead,
 )
 from app.vpn_access.dependencies import XuiProvider
-from app.vpn_access.service import profile_matches
+from app.vpn_access.service import VpnProfileState, profile_matches
 
 router = APIRouter(prefix="/api/admin/users", tags=["admin"])
+
+
+def _user_vpn_profiles(
+    user: User,
+    profile_states: dict[str, VpnProfileState] | None,
+) -> list[VpnProfileSummaryRead] | None:
+    if profile_states is None:
+        return None
+    prefix = profile_email(user)
+    return [
+        VpnProfileSummaryRead(
+            label=email[4:],
+            status=(
+                VpnProfileStatus.ONLINE if profile_state.online else VpnProfileStatus.OFFLINE
+            ),
+            enabled=profile_state.enabled,
+        )
+        for email, profile_state in sorted(
+            profile_states.items(), key=lambda item: item[0].casefold()
+        )
+        if profile_matches(email, prefix)
+    ]
 
 
 async def _get_user(db: Database, user_id: UUID, *, for_update: bool = False) -> User:
@@ -125,9 +148,9 @@ async def list_users(
         )
     ).all()
     try:
-        online_clients = await provider.list_online_clients()
+        profile_states = await provider.list_profile_states()
     except ApiError:
-        online_clients = None
+        profile_states = None
     return [
         AdminUserRead.model_validate(
             {
@@ -138,16 +161,7 @@ async def list_users(
                     user.account_status,
                     latest_status_source,
                 ),
-                "vpn_status": (
-                    VpnStatus.UNKNOWN
-                    if online_clients is None
-                    else VpnStatus.ONLINE
-                    if any(
-                        profile_matches(email, profile_email(user))
-                        for email in online_clients
-                    )
-                    else VpnStatus.OFFLINE
-                ),
+                "vpn_profiles": _user_vpn_profiles(user, profile_states),
             }
         )
         for user, total_charged, total_top_ups, latest_status_source in rows

@@ -1,7 +1,7 @@
 export type UserRole = 'admin' | 'user';
 export type AccountStatus = 'active' | 'paused' | 'blocked';
 export type AccountBlockSource = 'billing' | 'admin';
-export type VpnStatus = 'online' | 'offline' | 'unknown';
+export type VpnProfileStatus = 'online' | 'offline';
 export type StatusChangeSource = 'bootstrap' | 'admin' | 'billing' | 'top_up' | 'user';
 
 export interface User {
@@ -19,7 +19,11 @@ export interface User {
 export interface AdminUser extends User {
   total_charged: string;
   total_top_ups: string;
-  vpnStatus: VpnStatus;
+  vpnProfiles: Array<{
+    enabled: boolean;
+    label: string;
+    status: VpnProfileStatus;
+  }> | null;
 }
 
 export interface UserCharge {

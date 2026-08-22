@@ -2,6 +2,7 @@ import json
 from urllib.parse import quote, unquote
 
 import httpx
+import pytest
 from httpx import AsyncClient
 
 from app.config import Settings
@@ -14,7 +15,7 @@ from app.vpn_access.schemas import (
     VpnClientProfileRead,
     VpnConnectionRead,
 )
-from app.vpn_access.service import XuiClient, profile_matches
+from app.vpn_access.service import VpnProfileState, XuiClient, profile_matches
 
 from .test_auth_and_users import login
 
@@ -370,6 +371,52 @@ async def test_client_lists_only_online_web_profiles() -> None:
         vpn_settings(), transport=httpx.MockTransport(handler)
     ).list_online_clients()
     assert clients == {"web-one-mobile", "WEB-two-pc"}
+
+
+async def test_client_combines_web_profile_online_and_enabled_states() -> None:
+    requests: list[str] = []
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(request.url.path)
+        if request.url.path.endswith("/clients/list"):
+            obj: object = {
+                "clients": [
+                    {"email": "web-one-mobile", "enable": False},
+                    {"email": "WEB-two-pc", "enable": True},
+                    {"email": "telegram-user", "enable": True},
+                    {"email": "[web]-legacy", "enable": True},
+                ]
+            }
+        else:
+            obj = ["WEB-ONE-MOBILE", "telegram-user"]
+        return httpx.Response(200, json={"success": True, "obj": obj})
+
+    states = await XuiClient(
+        vpn_settings(), transport=httpx.MockTransport(handler)
+    ).list_profile_states()
+
+    assert states == {
+        "web-one-mobile": VpnProfileState(online=True, enabled=False),
+        "WEB-two-pc": VpnProfileState(online=False, enabled=True),
+    }
+    assert sorted(path.rsplit("/", 1)[-1] for path in requests) == ["list", "onlines"]
+
+
+async def test_client_rejects_web_profile_without_boolean_enabled_state() -> None:
+    async def handler(request: httpx.Request) -> httpx.Response:
+        obj: object = (
+            [{"email": "web-one-mobile", "enable": "true"}]
+            if request.url.path.endswith("/clients/list")
+            else []
+        )
+        return httpx.Response(200, json={"success": True, "obj": obj})
+
+    with pytest.raises(ApiError) as error:
+        await XuiClient(
+            vpn_settings(), transport=httpx.MockTransport(handler)
+        ).list_profile_states()
+
+    assert error.value.code == "vpn_provider_unavailable"
 
 
 class FakeXuiClient:

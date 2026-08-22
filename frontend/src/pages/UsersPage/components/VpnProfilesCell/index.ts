@@ -1,0 +1,1 @@
+export { VpnProfilesCell } from './VpnProfilesCell';

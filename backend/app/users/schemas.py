@@ -13,10 +13,15 @@ Password = Annotated[str, StringConstraints(min_length=8, max_length=128)]
 Money = Annotated[Decimal, Field(max_digits=14, decimal_places=2)]
 
 
-class VpnStatus(StrEnum):
+class VpnProfileStatus(StrEnum):
     ONLINE = "online"
     OFFLINE = "offline"
-    UNKNOWN = "unknown"
+
+
+class VpnProfileSummaryRead(BaseModel):
+    label: str
+    status: VpnProfileStatus
+    enabled: bool
 
 
 class AccountBlockSource(StrEnum):
@@ -45,7 +50,9 @@ class UserRead(BaseModel):
 class AdminUserRead(UserRead):
     total_charged: Decimal
     total_top_ups: Decimal
-    vpn_status: VpnStatus = Field(serialization_alias="vpnStatus")
+    vpn_profiles: list[VpnProfileSummaryRead] | None = Field(
+        serialization_alias="vpnProfiles"
+    )
 
     @field_serializer("total_charged", "total_top_ups")
     def serialize_totals(self, value: Decimal) -> str:

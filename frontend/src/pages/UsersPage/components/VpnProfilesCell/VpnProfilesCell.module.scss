@@ -1,0 +1,187 @@
+.trigger {
+  display: inline-grid;
+  min-width: 30px;
+  height: 30px;
+  place-items: center;
+  padding: 0 8px;
+  color: var(--accent-bright);
+  font-family: var(--font-data);
+  font-size: .75rem;
+  font-weight: 720;
+  cursor: help;
+  background: var(--accent-soft);
+  border: 1px solid var(--border-strong);
+  border-radius: 9px;
+  transition: color 150ms ease, background 150ms ease, border-color 150ms ease;
+}
+
+.trigger:hover,
+.trigger:focus-visible {
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent-soft) 72%, var(--surface-strong));
+  border-color: var(--accent-bright);
+}
+
+.trigger:focus-visible {
+  outline: none;
+  box-shadow: var(--focus);
+}
+
+.unavailable {
+  color: var(--text-muted);
+  background: var(--surface-muted);
+  border-color: var(--border);
+}
+
+.tooltip {
+  position: fixed;
+  z-index: 1200;
+  width: max-content;
+  min-width: 250px;
+  max-width: min(320px, calc(100vw - 24px));
+  padding: 12px 13px;
+  color: var(--text);
+  background: var(--surface-strong);
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  animation: tooltip-in 140ms ease-out;
+}
+
+.tooltip::after {
+  position: absolute;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  content: '';
+  background: var(--surface-strong);
+  border: solid var(--border-strong);
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.tooltip[data-placement='above']::after {
+  bottom: -5px;
+  border-width: 0 1px 1px 0;
+}
+
+.tooltip[data-placement='below']::after {
+  top: -5px;
+  border-width: 1px 0 0 1px;
+}
+
+.tooltip p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: .74rem;
+}
+
+.profileHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 9px;
+}
+
+.profileHeader strong {
+  color: var(--text-muted);
+  font-size: .63rem;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.tooltip ul {
+  position: relative;
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tooltip ul::before {
+  position: absolute;
+  top: 14px;
+  bottom: 14px;
+  left: 4px;
+  width: 1px;
+  content: '';
+  background: var(--border);
+}
+
+.tooltip li {
+  display: grid;
+  grid-template-columns: 8px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 11px;
+  padding: 7px 0;
+  overflow-wrap: anywhere;
+}
+
+.indicator {
+  position: relative;
+  z-index: 1;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.online {
+  background: var(--positive);
+  box-shadow: 0 0 0 3px var(--positive-soft);
+}
+
+.offline {
+  background: var(--surface-strong);
+  border: 1px solid var(--text-muted);
+}
+
+.profileDetails {
+  display: grid;
+  gap: 3px;
+}
+
+.profileName {
+  font-family: var(--font-data);
+  font-size: .72rem;
+  font-weight: 650;
+}
+
+.profileDetails small {
+  color: var(--text-muted);
+  font-size: .6rem;
+}
+
+.enabledState {
+  min-width: 70px;
+  padding: 3px 7px;
+  font-size: .58rem;
+  font-weight: 680;
+  line-height: 1.2;
+  text-align: center;
+  border: 1px solid;
+  border-radius: 999px;
+}
+
+.enabled {
+  color: var(--positive);
+  background: var(--positive-soft);
+  border-color: color-mix(in srgb, var(--positive) 28%, transparent);
+}
+
+.disabled {
+  color: var(--text-muted);
+  background: var(--surface-muted);
+  border-color: var(--border);
+}
+
+@keyframes tooltip-in {
+  from { opacity: 0; transform: translateY(3px) scale(.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trigger { transition-duration: .01ms; }
+  .tooltip { animation-duration: .01ms; }
+}

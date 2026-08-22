@@ -34,6 +34,7 @@ import {
   ResetPasswordForm,
   StatusHistoryModal,
   UserForm,
+  VpnProfilesCell,
 } from './components';
 import styles from './UsersPage.module.scss';
 
@@ -41,12 +42,6 @@ const accountStatusView = {
   active: { label: 'Активен', tone: 'positive' },
   paused: { label: 'Приостановлен', tone: 'warning' },
   blocked: { label: 'Заблокирован', tone: 'danger' },
-} as const;
-
-const vpnStatusView = {
-  online: { label: 'В сети', tone: 'positive' },
-  offline: { label: 'Не в сети', tone: 'neutral' },
-  unknown: { label: 'Неизвестно', tone: 'warning' },
 } as const;
 
 const userCollator = new Intl.Collator('ru', { numeric: true, sensitivity: 'base' });
@@ -151,17 +146,11 @@ export function UsersPage() {
       },
     },
     {
-      id: 'vpnStatus',
+      id: 'vpnProfiles',
       label: 'VPN',
-      compare: (left, right) => userCollator.compare(
-        vpnStatusView[left.vpnStatus].label,
-        vpnStatusView[right.vpnStatus].label,
-      ),
-      cellClassName: styles.vpnStatus,
-      render: (user) => {
-        const vpnView = vpnStatusView[user.vpnStatus];
-        return <Badge tone={vpnView.tone}>{vpnView.label}</Badge>;
-      },
+      compare: (left, right) => (left.vpnProfiles?.length ?? -1) - (right.vpnProfiles?.length ?? -1),
+      cellClassName: styles.vpnProfiles,
+      render: (user) => <VpnProfilesCell profiles={user.vpnProfiles} userName={user.name} />,
     },
     {
       id: 'balance',

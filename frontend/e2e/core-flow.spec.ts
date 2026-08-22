@@ -38,6 +38,8 @@ test('administrator manages a user account until deletion', async ({ page }) => 
   const adminMobileProfile = `${adminName}-mobile`;
   const adminPcProfile = `${adminName}-pc`;
   const memberName = 'Участник-e2e';
+  const memberMobileProfile = `${memberName}-mobile`;
+  const memberPcProfile = `${memberName}-pc`;
   const initialPassword = 'member-password';
   const nextPassword = 'member-password-next';
   const logout = async () => {
@@ -78,6 +80,16 @@ test('administrator manages a user account until deletion', async ({ page }) => 
   await page.getByRole('link', { name: 'Админ-панель' }).click();
   await expect(page).toHaveURL(/\/admin\/users$/);
   await expect(page.getByRole('heading', { name: 'Пользователи' })).toBeVisible();
+  const adminRow = page.locator('tbody tr').filter({ hasText: adminName });
+  const adminProfiles = adminRow.getByRole('button', {
+    name: `2 VPN-профиля у пользователя ${adminName}`,
+  });
+  await expect(adminProfiles).toHaveText('2');
+  await adminProfiles.hover();
+  const profilesTooltip = page.getByRole('tooltip');
+  await expect(profilesTooltip.getByText(adminMobileProfile, { exact: true })).toBeVisible();
+  await expect(profilesTooltip.getByText(adminPcProfile, { exact: true })).toBeVisible();
+  await expect(profilesTooltip.getByLabel('Профиль включён')).toHaveCount(2);
   await page.getByRole('button', { name: 'Добавить' }).click();
   const createDialog = page.getByRole('dialog', { name: 'Новый пользователь' });
   await createDialog.getByLabel('Имя').fill(memberName);
@@ -172,7 +184,16 @@ test('administrator manages a user account until deletion', async ({ page }) => 
   await expect(editDialog).toBeHidden();
   const memberRow = page.locator('tbody tr').filter({ hasText: memberName });
   await expect(memberRow.getByText('Заблокирован', { exact: true })).toBeVisible();
-  await expect(memberRow.getByText('Не в сети', { exact: true })).toBeVisible();
+  const memberProfiles = memberRow.getByRole('button', {
+    name: `2 VPN-профиля у пользователя ${memberName}`,
+  });
+  await expect(memberProfiles).toHaveText('2');
+  await memberProfiles.hover();
+  const memberProfilesTooltip = page.getByRole('tooltip');
+  await expect(memberProfilesTooltip.getByText(memberMobileProfile, { exact: true })).toBeVisible();
+  await expect(memberProfilesTooltip.getByText(memberPcProfile, { exact: true })).toBeVisible();
+  await expect(memberProfilesTooltip.getByLabel('Не в сети')).toHaveCount(2);
+  await expect(memberProfilesTooltip.getByLabel('Профиль выключен')).toHaveCount(2);
 
   await memberRow.getByRole('button', { name: `Открыть историю статуса ${memberName}` }).click();
   const statusHistoryDialog = page.getByRole('dialog', { name: 'История статуса' });

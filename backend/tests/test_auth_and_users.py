@@ -22,18 +22,19 @@ from app.payments.models import YooMoneyPayment, YooMoneyPaymentStatus
 from app.tariff_plans.models import TariffPlan
 from app.users.models import AccountStatus, User
 from app.vpn_access.dependencies import get_xui_client
+from app.vpn_access.service import VpnProfileState
 
 
 class FakeStatusXuiClient:
-    def __init__(self, online_clients: set[str] | None = None) -> None:
+    def __init__(self, profile_states: dict[str, VpnProfileState] | None = None) -> None:
         self.updates: list[tuple[str, bool]] = []
-        self.online_clients = online_clients or set()
+        self.profile_states = profile_states or {}
 
     async def set_matching_enabled(self, email: str, enabled: bool) -> None:
         self.updates.append((email, enabled))
 
-    async def list_online_clients(self) -> set[str]:
-        return self.online_clients
+    async def list_profile_states(self) -> dict[str, VpnProfileState]:
+        return self.profile_states
 
 
 class FailingStatusXuiClient:
@@ -44,7 +45,7 @@ class FailingStatusXuiClient:
             message="VPN-панель временно недоступна",
         )
 
-    async def list_online_clients(self) -> set[str]:
+    async def list_profile_states(self) -> dict[str, VpnProfileState]:
         raise ApiError(
             status_code=502,
             code="vpn_provider_unavailable",
@@ -79,7 +80,14 @@ async def test_admin_creates_and_updates_user(
     client: AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],
 ) -> None:
-    provider = FakeStatusXuiClient({"web-Лена-mobile"})
+    provider = FakeStatusXuiClient(
+        {
+            "WEB-Лена-PC": VpnProfileState(online=False, enabled=True),
+            "web-Лена-mobile": VpnProfileState(online=True, enabled=False),
+            "web-Лена2-tablet": VpnProfileState(online=True, enabled=True),
+            "telegram-Лена": VpnProfileState(online=True, enabled=True),
+        }
+    )
     app.dependency_overrides[get_xui_client] = lambda: provider
     await login(client)
     created = await client.post(
@@ -173,10 +181,14 @@ async def test_admin_creates_and_updates_user(
         "admin": "0.00",
         "Лена": "10.00",
     }
-    assert {user["name"]: user["vpnStatus"] for user in users} == {
-        "admin": "offline",
-        "Лена": "online",
+    assert {user["name"]: user["vpnProfiles"] for user in users} == {
+        "admin": [],
+        "Лена": [
+            {"label": "Лена-mobile", "status": "online", "enabled": False},
+            {"label": "Лена-PC", "status": "offline", "enabled": True},
+        ],
     }
+    assert all("vpnStatus" not in user for user in users)
     history = (await client.get(f"/api/admin/users/{user_id}/charges")).json()
     assert [entry["created_at"][:10] for entry in history] == ["2026-08-02", "2026-08-01"]
     assert [entry["amount"] for entry in history] == ["20.50", "10.25"]
@@ -677,14 +689,15 @@ async def test_financial_block_avoids_transient_vpn_enable(
         assert job is not None and job.desired_enabled is False
 
 
-async def test_provider_failure_marks_vpn_status_unknown(client: AsyncClient) -> None:
+async def test_provider_failure_marks_vpn_profiles_unavailable(client: AsyncClient) -> None:
     await login(client)
     app.dependency_overrides[get_xui_client] = lambda: FailingStatusXuiClient()
 
     response = await client.get("/api/admin/users")
 
     assert response.status_code == 200
-    assert {item["vpnStatus"] for item in response.json()} == {"unknown"}
+    assert {item["vpnProfiles"] for item in response.json()} == {None}
+    assert all("vpnStatus" not in item for item in response.json())
 
 
 async def test_admin_deletes_user_and_revokes_sessions(

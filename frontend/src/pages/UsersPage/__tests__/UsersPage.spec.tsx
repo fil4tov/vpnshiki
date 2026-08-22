@@ -19,24 +19,28 @@ const users: AdminUser[] = [
     id: 'online', name: 'online-user', role: 'user', account_status: 'paused',
     block_source: null,
     balance: '-10.00', negative_balance_limit: '500.00', total_charged: '10.00', total_top_ups: '5.00',
-    vpnStatus: 'online', created_at: createdAt, updated_at: createdAt,
+    vpnProfiles: [
+      { enabled: false, label: 'online-user-mobile', status: 'online' },
+      { enabled: true, label: 'online-user-PC', status: 'offline' },
+    ],
+    created_at: createdAt, updated_at: createdAt,
   },
   {
     id: 'offline', name: 'offline-user', role: 'user', account_status: 'blocked',
     block_source: 'admin',
     balance: '100.00', negative_balance_limit: '100.00', total_charged: '30.00', total_top_ups: '15.00',
-    vpnStatus: 'offline', created_at: createdAt, updated_at: createdAt,
+    vpnProfiles: [], created_at: createdAt, updated_at: createdAt,
   },
   {
     id: 'unknown', name: 'unknown-user', role: 'user', account_status: 'active',
     block_source: null,
     balance: '0.00', negative_balance_limit: '1000.00', total_charged: '20.00', total_top_ups: '10.00',
-    vpnStatus: 'unknown', created_at: createdAt, updated_at: createdAt,
+    vpnProfiles: null, created_at: createdAt, updated_at: createdAt,
   },
 ];
 
 describe('UsersPage', () => {
-  it('shows VPN status after the account status column', async () => {
+  it('shows VPN profile counts and accessible profile details after the account status column', async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
@@ -73,8 +77,23 @@ describe('UsersPage', () => {
     await userEvent.click(copyIdButton);
     expect(writeText).toHaveBeenCalledWith('online');
     expect(copyIdButton).toHaveAttribute('data-copy-state', 'copied');
-    expect(onlineRow.getByText('В сети'))
-      .toBeInTheDocument();
+    const profilesTrigger = onlineRow.getByRole('button', {
+      name: '2 VPN-профиля у пользователя online-user',
+    });
+    expect(profilesTrigger).toHaveTextContent('2');
+    await userEvent.hover(profilesTrigger);
+    const tooltip = await screen.findByRole('tooltip');
+    expect(within(tooltip).getByText('Профили пользователя')).toBeInTheDocument();
+    expect(within(tooltip).getByText('online-user-mobile')).toBeInTheDocument();
+    expect(within(tooltip).getByText('online-user-PC')).toBeInTheDocument();
+    expect(within(tooltip).getByLabelText('В сети')).toBeInTheDocument();
+    expect(within(tooltip).getByLabelText('Не в сети')).toBeInTheDocument();
+    const mobileProfile = within(tooltip).getByText('online-user-mobile').closest('li')!;
+    const pcProfile = within(tooltip).getByText('online-user-PC').closest('li')!;
+    expect(within(mobileProfile).getByText('В сети')).toBeInTheDocument();
+    expect(within(pcProfile).getByText('Не в сети')).toBeInTheDocument();
+    expect(within(mobileProfile).getByLabelText('Профиль выключен')).toHaveTextContent('Выключен');
+    expect(within(pcProfile).getByLabelText('Профиль включён')).toHaveTextContent('Включён');
     const historyButton = onlineRow.getByRole('button', {
       name: 'Открыть историю списаний online-user',
     });
@@ -91,10 +110,20 @@ describe('UsersPage', () => {
     expect(statusHistoryButton).toHaveTextContent('');
     expect(statusHistoryButton.closest('td')).toHaveAttribute('data-label', 'Статус');
     expect(screen.queryByText('Открыть')).not.toBeInTheDocument();
-    expect(within(screen.getByText('offline-user').closest('tr')!).getByText('Не в сети'))
-      .toBeInTheDocument();
-    expect(within(screen.getByText('unknown-user').closest('tr')!).getByText('Неизвестно'))
-      .toBeInTheDocument();
+    const emptyTrigger = within(screen.getByText('offline-user').closest('tr')!).getByRole('button', {
+      name: 'Нет VPN-профилей у пользователя offline-user',
+    });
+    await userEvent.unhover(profilesTrigger);
+    await userEvent.hover(emptyTrigger);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('VPN-профили не найдены');
+    const unavailableTrigger = within(screen.getByText('unknown-user').closest('tr')!).getByRole('button', {
+      name: 'Данные VPN-профилей пользователя unknown-user недоступны',
+    });
+    await userEvent.unhover(emptyTrigger);
+    await userEvent.hover(unavailableTrigger);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      'Не удалось получить данные из VPN-панели',
+    );
   });
 
   it('sorts users by every data column and toggles the direction', async () => {
@@ -124,7 +153,7 @@ describe('UsersPage', () => {
     const descendingOrders: Array<[string, string[]]> = [
       ['Пользователь', ['offline-user', 'online-user', 'unknown-user']],
       ['Статус', ['online-user', 'offline-user', 'unknown-user']],
-      ['VPN', ['unknown-user', 'offline-user', 'online-user']],
+      ['VPN', ['online-user', 'offline-user', 'unknown-user']],
       ['Баланс', ['offline-user', 'unknown-user', 'online-user']],
       ['Лимит', ['unknown-user', 'online-user', 'offline-user']],
       ['Всего списаний', ['offline-user', 'unknown-user', 'online-user']],

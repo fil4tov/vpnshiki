@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from dataclasses import dataclass
 from typing import Any
 from urllib.parse import parse_qs, quote, unquote, urlsplit
 
@@ -12,6 +13,12 @@ from .schemas import VpnAccessRead, VpnClientProfileRead, VpnConnectionRead
 
 PROVIDER_TIMEOUT_SECONDS = 8.0
 logger = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True, slots=True)
+class VpnProfileState:
+    online: bool
+    enabled: bool
 
 
 def _unconfigured() -> ApiError:
@@ -191,6 +198,26 @@ class XuiClient:
         ):
             raise _provider_unavailable()
         return {email for email in clients if email.casefold().startswith("web-")}
+
+    async def list_profile_states(self) -> dict[str, VpnProfileState]:
+        clients, online_clients = await asyncio.gather(
+            self._list_clients(),
+            self.list_online_clients(),
+        )
+        normalized_online_clients = {email.casefold() for email in online_clients}
+        states: dict[str, VpnProfileState] = {}
+        for item in clients:
+            email = item.get("email")
+            if not isinstance(email, str) or not email.casefold().startswith("web-"):
+                continue
+            enabled = item.get("enable")
+            if not isinstance(enabled, bool):
+                raise _provider_unavailable()
+            states[email] = VpnProfileState(
+                online=email.casefold() in normalized_online_clients,
+                enabled=enabled,
+            )
+        return dict(sorted(states.items(), key=lambda item: item[0].casefold()))
 
     async def set_enabled(self, email: str, enabled: bool) -> None:
         provider_client = await self.get_client(email)
