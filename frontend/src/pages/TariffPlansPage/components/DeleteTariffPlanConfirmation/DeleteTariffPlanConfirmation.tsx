@@ -42,7 +42,7 @@ export function DeleteTariffPlanConfirmation({
       </div>
       <p className={styles.notice}>Это действие нельзя отменить.</p>
       {error && <p className={styles.error} role="alert">{error}</p>}
-      <div className={styles.actions}>
+      <div className={styles.actions} data-modal-footer>
         <Button type="button" variant="ghost" disabled={pending} onClick={onCancel}>Отмена</Button>
         <Button type="button" variant="danger" loading={pending} onClick={() => void confirm()}>
           Удалить план

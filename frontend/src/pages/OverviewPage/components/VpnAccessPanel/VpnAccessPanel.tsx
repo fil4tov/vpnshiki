@@ -72,7 +72,7 @@ export function VpnAccessPanel({ accountStatus }: VpnAccessPanelProps) {
         <div className={styles.heading}><h2 id="vpn-heading">Ваш VPN</h2></div>
         <div className={styles.unavailable}>
           <span className={styles.stateIcon}>{blocked ? <FiLock /> : <FiPauseCircle />}</span>
-          <h3>VPN доступен только для активного аккаунта</h3>
+          <h3>VPN недоступен</h3>
         </div>
       </section>
     );

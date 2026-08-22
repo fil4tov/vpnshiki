@@ -244,6 +244,7 @@
 
 @media (max-width: 580px) {
   .card { min-height: 440px; padding: 22px; }
+  .orbit { margin-inline: auto; }
   .actions { flex-direction: column; }
   .card .copyButton, .card .qrButton { width: 100%; }
   .card .qrButton { min-height: 42px; }

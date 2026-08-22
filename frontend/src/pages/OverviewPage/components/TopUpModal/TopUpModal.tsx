@@ -75,7 +75,7 @@ export function TopUpModal({ open, onClose }: TopUpModalProps) {
           <p className={styles.notice}>
             ЮMoney взимает комиссию от 1 до 3%. На баланс поступит сумма за вычетом комиссии.
           </p>
-          <div className={styles.actions}>
+          <div className={styles.actions} data-modal-footer>
             <Button type="button" variant="ghost" onClick={() => setPayment(null)}>Назад</Button>
             <Button type="button" onClick={pay}>Перейти к оплате</Button>
           </div>
@@ -103,7 +103,7 @@ export function TopUpModal({ open, onClose }: TopUpModalProps) {
             ЮMoney взимает комиссию от 1 до 3%. На баланс поступит сумма за вычетом комиссии.
           </p>
           {errors.root?.message && <p className={styles.error} role="alert">{errors.root.message}</p>}
-          <div className={styles.actions}>
+          <div className={styles.actions} data-modal-footer>
             <Button type="button" variant="ghost" onClick={resetAndClose}>Отмена</Button>
             <Button type="submit" loading={isSubmitting}>Продолжить</Button>
           </div>

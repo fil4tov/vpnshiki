@@ -1,7 +1,7 @@
 .section {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) minmax(300px, 1.25fr);
-  gap: 34px;
+  grid-template-columns: var(--vpn-content-columns);
+  gap: var(--vpn-content-gap);
   margin-top: 22px;
   color: var(--text);
 }
@@ -97,10 +97,6 @@
 
 @keyframes shimmer {
   to { background-position: -140% 0; }
-}
-
-@media (max-width: 760px) {
-  .section { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 560px) {

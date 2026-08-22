@@ -43,7 +43,7 @@ export function ResetPasswordForm({ name, onCancel, onSubmit }: { name: string; 
         {...register('confirmation', { validate: (value) => value === getValues('password') || 'Пароли не совпадают' })}
       />
       {errors.root?.message && <p className={styles.error}>{errors.root.message}</p>}
-      <div className={styles.actions}><Button type="button" variant="ghost" onClick={onCancel}>Отмена</Button><Button type="submit" loading={isSubmitting}>Сбросить пароль</Button></div>
+      <div className={styles.actions} data-modal-footer><Button type="button" variant="ghost" onClick={onCancel}>Отмена</Button><Button type="submit" loading={isSubmitting}>Сбросить пароль</Button></div>
     </form>
   );
 }

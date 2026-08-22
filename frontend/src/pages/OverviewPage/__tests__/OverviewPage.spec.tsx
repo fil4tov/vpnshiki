@@ -103,10 +103,26 @@ describe('OverviewPage', () => {
   it('opens balance top-up from the page heading', () => {
     renderPage();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Пополнить' }));
+    const accountCard = screen.getByRole('region', { name: 'Статус участия и баланс' });
+    const topUpButton = screen.getByRole('button', { name: 'Пополнить' });
+    expect(accountCard.compareDocumentPosition(topUpButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+    fireEvent.click(topUpButton);
 
     expect(screen.getByRole('dialog', { name: 'Пополнить баланс' })).toBeInTheDocument();
     expect(screen.getByLabelText('Сумма платежа, ₽')).toBeInTheDocument();
+  });
+
+  it('provides the balance top-up action inside the status card on mobile', () => {
+    renderPage();
+
+    const accountCard = screen.getByRole('region', { name: 'Статус участия и баланс' });
+    const mobileTopUpButton = within(accountCard).getByText('Пополнить').closest('button');
+    expect(mobileTopUpButton).not.toBeNull();
+
+    fireEvent.click(mobileTopUpButton!);
+
+    expect(screen.getByRole('dialog', { name: 'Пополнить баланс' })).toBeInTheDocument();
   });
 
   it('covers the whole daily charge pill with a skeleton while loading', () => {

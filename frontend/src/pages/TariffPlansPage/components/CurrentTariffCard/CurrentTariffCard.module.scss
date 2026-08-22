@@ -323,4 +323,5 @@
   .stats { grid-template-columns: 1fr; }
   .stats > div + div { border-top: 1px solid var(--border); border-left: 0; }
   .stats span { white-space: normal; }
+  .chargeLabel { right: auto; left: 18px; transform: none; }
 }

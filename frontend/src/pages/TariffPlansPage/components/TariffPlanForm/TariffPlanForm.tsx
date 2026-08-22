@@ -105,7 +105,7 @@ export function TariffPlanForm({ plan, plans, onCancel, onSubmit }: TariffPlanFo
         <span>Периоды начинаются в 00:00 и заканчиваются в 23:59 по московскому времени.</span>
       </div>
       {errors.root?.message && <p className={styles.formError} role="alert">{errors.root.message}</p>}
-      <div className={styles.actions}>
+      <div className={styles.actions} data-modal-footer>
         <Button type="button" variant="ghost" onClick={onCancel}>Отмена</Button>
         <Button type="submit" loading={isSubmitting}>
           {plan ? 'Сохранить изменения' : 'Создать план'}

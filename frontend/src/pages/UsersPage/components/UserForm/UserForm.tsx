@@ -136,7 +136,7 @@ export function UserForm({ user, onCancel, onSubmit }: UserFormProps) {
         />
       </div>
       {errors.root?.message && <p className={styles.formError}>{errors.root.message}</p>}
-      <div className={styles.actions}><Button type="button" variant="ghost" onClick={onCancel}>Отмена</Button><Button type="submit" loading={isSubmitting}>{user ? 'Сохранить изменения' : 'Создать пользователя'}</Button></div>
+      <div className={styles.actions} data-modal-footer><Button type="button" variant="ghost" onClick={onCancel}>Отмена</Button><Button type="submit" loading={isSubmitting}>{user ? 'Сохранить изменения' : 'Создать пользователя'}</Button></div>
     </form>
   );
 }

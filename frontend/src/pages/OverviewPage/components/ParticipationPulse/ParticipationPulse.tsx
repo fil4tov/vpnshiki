@@ -1,4 +1,5 @@
 import { FiLock, FiPause, FiRadio } from 'react-icons/fi';
+import type { ReactNode } from 'react';
 
 import type { AccountBlockSource, AccountStatus } from '#entities/user';
 import { formatMoney, isNegativeMoney } from '#shared/lib/money';
@@ -12,9 +13,17 @@ interface ParticipationPulseProps {
   balance: string;
   negativeBalanceLimit: string;
   dailyCharge: string | null | undefined;
+  mobileAction?: ReactNode;
 }
 
-export function ParticipationPulse({ accountStatus, blockSource, balance, negativeBalanceLimit, dailyCharge }: ParticipationPulseProps) {
+export function ParticipationPulse({
+  accountStatus,
+  blockSource,
+  balance,
+  negativeBalanceLimit,
+  dailyCharge,
+  mobileAction,
+}: ParticipationPulseProps) {
   const active = accountStatus === 'active';
   const blocked = accountStatus === 'blocked';
   const status = blocked ? 'Заблокирован' : active ? 'Активен' : 'Приостановлен';
@@ -66,6 +75,7 @@ export function ParticipationPulse({ accountStatus, blockSource, balance, negati
             <small>Лимит минуса: {formatMoney(negativeBalanceLimit)}</small>
           </div>
         </div>
+        {mobileAction && <div className={styles.mobileAction}>{mobileAction}</div>}
       </div>
     </section>
   );

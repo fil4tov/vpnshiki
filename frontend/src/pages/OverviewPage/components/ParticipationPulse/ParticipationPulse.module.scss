@@ -31,6 +31,7 @@
 .balance strong { max-width: 100%; font-family: var(--font-data); font-size: clamp(1.8rem,4vw,3rem); line-height: 1.1; letter-spacing: -.055em; overflow-wrap: anywhere; }
 .balance .negativeBalance { color: var(--danger); }
 .balance small { color: var(--text-muted); font-size: .74rem; }
+.mobileAction { display: none; }
 
 @keyframes orbit { to { transform: rotate(360deg); } }
 @keyframes charge-shimmer { to { transform: translateX(100%); } }
@@ -54,4 +55,5 @@
   .mainContent { grid-template-columns: 1fr; justify-items: center; gap: 26px; padding-top: 34px; text-align: center; }
   .finances { grid-column: auto; width: 100%; }
   .balance { align-items: center; justify-items: center; text-align: center; }
+  .mobileAction { display: block; width: 100%; }
 }

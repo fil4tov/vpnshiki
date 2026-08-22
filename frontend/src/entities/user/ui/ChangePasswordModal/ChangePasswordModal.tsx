@@ -96,7 +96,7 @@ export function ChangePasswordModal({ open, onClose, onSuccess }: ChangePassword
           {...register('confirmPassword', { validate: (value) => value === getValues('newPassword') || 'Пароли не совпадают' })}
         />
         {errors.root?.message && <p className={styles.error}>{errors.root.message}</p>}
-        <div className={styles.actions}>
+        <div className={styles.actions} data-modal-footer>
           <Button type="button" variant="ghost" onClick={cancel}>Отмена</Button>
           <Button type="submit" loading={isSubmitting}>Сохранить пароль</Button>
         </div>

@@ -3,4 +3,4 @@
 .selectRow { display: grid; grid-template-columns: 1fr; align-items: start; gap: 17px; }
 .actions { display: flex; justify-content: flex-end; gap: 9px; margin-top: 3px; }
 .formError { margin: 0; color: var(--danger); font-size: .82rem; }
-@media (max-width: 500px) { .moneyRow, .selectRow { grid-template-columns: 1fr; } .actions { display: grid; } }
+@media (max-width: 500px) { .moneyRow, .selectRow { grid-template-columns: 1fr; } }

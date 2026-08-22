@@ -21,27 +21,37 @@ export function OverviewPage() {
 
   return (
     <div className={styles.page}>
-      <header className={styles.heading}>
-        <div className={styles.headingCopy}>
-          <p>Личный кабинет</p>
-          <h1>Привет, {user.name}</h1>
+      <div className={styles.accountOverview}>
+        <header className={styles.heading}>
+          <div className={styles.headingCopy}>
+            <p>Личный кабинет</p>
+            <h1>Привет, {user.name}</h1>
+          </div>
+        </header>
+        <div className={styles.participation}>
+          <ParticipationPulse
+            accountStatus={user.account_status}
+            blockSource={user.block_source}
+            balance={user.balance}
+            negativeBalanceLimit={user.negative_balance_limit}
+            dailyCharge={active && dailyChargeQuery.isPending
+              ? undefined
+              : dailyChargeQuery.data?.daily_charge ?? null}
+            mobileAction={canTopUp ? (
+              <Button className={styles.mobileTopUpButton} onClick={() => setTopUpOpen(true)}>
+                <FiPlus aria-hidden="true" />
+                Пополнить
+              </Button>
+            ) : null}
+          />
         </div>
         {canTopUp && (
-          <Button className={styles.topUpButton} onClick={() => setTopUpOpen(true)}>
+          <Button className={styles.desktopTopUpButton} onClick={() => setTopUpOpen(true)}>
             <FiPlus aria-hidden="true" />
             Пополнить
           </Button>
         )}
-      </header>
-      <ParticipationPulse
-        accountStatus={user.account_status}
-        blockSource={user.block_source}
-        balance={user.balance}
-        negativeBalanceLimit={user.negative_balance_limit}
-        dailyCharge={active && dailyChargeQuery.isPending
-          ? undefined
-          : dailyChargeQuery.data?.daily_charge ?? null}
-      />
+      </div>
       <VpnAccessPanel accountStatus={user.account_status} />
       {active && <RecommendedVpnClients />}
       {canTopUp && <TopUpModal open={topUpOpen} onClose={() => setTopUpOpen(false)} />}

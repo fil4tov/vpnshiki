@@ -210,7 +210,7 @@ describe('VpnAccessPanel', () => {
 
   it.each(['paused', 'blocked'] as const)('does not request secrets for a %s account', (status) => {
     renderPanel(status);
-    expect(screen.getByText('VPN доступен только для активного аккаунта')).toBeInTheDocument();
+    expect(screen.getByText('VPN недоступен')).toBeInTheDocument();
     expect(getMyVpnAccess).not.toHaveBeenCalled();
   });
 

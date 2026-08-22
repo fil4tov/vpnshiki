@@ -9,3 +9,15 @@
 .close:hover { color: var(--text); background: var(--accent-soft); border-color: var(--border-strong); }
 .close:active { color: var(--text); background: color-mix(in srgb, var(--accent) 24%, transparent); border-color: var(--border-strong); }
 .close:focus-visible { outline: none; box-shadow: var(--focus); }
+
+@media (max-width: 580px) {
+  .body :global([data-modal-footer]) {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .body :global([data-modal-footer]) > * {
+    width: 100%;
+  }
+}

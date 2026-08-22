@@ -2,9 +2,9 @@
 .heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 18px; }
 .heading h2 { margin: 0; font-size: clamp(2rem, 4vw, 3rem); line-height: 1; letter-spacing: -.055em; }
 .heading > span { padding: 9px 13px; color: var(--text-muted); font-size: .72rem; border: 1px solid var(--border); border-radius: 999px; }
-.layout { display: grid; grid-template-columns: minmax(0, 3fr) minmax(360px, 2fr); gap: 15px; }
+.layout { display: grid; grid-template-columns: var(--vpn-content-columns); gap: var(--vpn-content-gap); }
 
-.skeleton { display: grid; min-height: 470px; grid-template-columns: minmax(0, 3fr) minmax(360px, 2fr); gap: 15px; }
+.skeleton { display: grid; min-height: 470px; grid-template-columns: var(--vpn-content-columns); gap: var(--vpn-content-gap); }
 .skeleton span { position: relative; overflow: hidden; background: var(--surface); border: 1px solid var(--border); border-radius: 24px; }
 .skeleton span::after { position: absolute; inset: 0; content: ''; background: linear-gradient(105deg, transparent 25%, var(--surface-muted) 42%, transparent 60%); transform: translateX(-100%); animation: shimmer 1.5s infinite; }
 
@@ -42,7 +42,6 @@
 @keyframes shimmer { to { transform: translateX(100%); } }
 
 @media (max-width: 900px) {
-  .layout, .skeleton { grid-template-columns: 1fr; }
   .skeleton { min-height: 780px; grid-template-rows: 390px 1fr; }
 }
 
@@ -52,6 +51,7 @@
   .heading > span { padding: 7px 9px; font-size: .63rem; }
   .unavailable { min-height: 120px; gap: 14px; padding: 22px; }
   .unavailable h3 { font-size: .92rem; line-height: 1.35; }
-  .errorState { align-items: flex-start; flex-direction: column; padding: 22px; }
-  .errorState > button { width: 100%; margin-left: 0; }
+  .errorState { align-items: center; flex-flow: row wrap; justify-content: center; gap: 16px; padding: 22px; }
+  .errorState > div { flex: 1; min-width: 0; }
+  .errorState > button { flex: 0 0 100%; width: 100%; margin-left: 0; }
 }
