@@ -22,7 +22,7 @@
 .action button { width: 34px; justify-content: center; padding: 0; }
 .action svg { transition: transform 160ms ease; }
 .rotated { transform: rotate(180deg); }
-.detailsRow td { padding: 0 16px 16px; border-top: 0; }
+.detailsRow td { padding: 16px; border-top: 0; }
 .empty { min-height: 190px; display: grid; place-content: center; justify-items: center; gap: 13px; padding: 30px; text-align: center; }
 .empty div { display: grid; gap: 4px; }
 .empty strong { font-size: .86rem; }
