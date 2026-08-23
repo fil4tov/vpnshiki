@@ -16,12 +16,11 @@ import type { DataTableColumn } from '#shared/ui';
 
 import { PaymentTechnicalDetails } from '../PaymentTechnicalDetails';
 import { TopUpFilters } from '../TopUpFilters';
-import type { PaymentStatusFilter, PaymentTypeFilter } from '../../types';
+import type { PaymentStatusFilter } from '../../types';
 import {
   formatPaymentDate,
   formatPaymentTime,
   paymentStatusView,
-  paymentTypeLabel,
   sumPayments,
 } from '../../utils';
 import styles from './OperationsView.module.scss';
@@ -33,7 +32,6 @@ function matchesPayment(
   search: string,
   userId: string,
   status: PaymentStatusFilter,
-  paymentType: PaymentTypeFilter,
 ): boolean {
   const query = search.trim().toLocaleLowerCase('ru-RU');
   const searchable = [
@@ -42,13 +40,10 @@ function matchesPayment(
     payment.label,
     payment.operation_id ?? '',
   ].join(' ').toLocaleLowerCase('ru-RU');
-  const matchesType = paymentType === 'all'
-    || (paymentType === 'unknown' ? payment.payment_type === null : payment.payment_type === paymentType);
   const matchesUser = userId === 'all' || payment.user_id === userId;
   return (!query || searchable.includes(query))
     && matchesUser
-    && (status === 'all' || payment.status === status)
-    && matchesType;
+    && (status === 'all' || payment.status === status);
 }
 
 export function OperationsView({ payments }: { payments: AdminYooMoneyPayment[] }) {
@@ -56,10 +51,9 @@ export function OperationsView({ payments }: { payments: AdminYooMoneyPayment[] 
   const [search, setSearch] = useState('');
   const [userId, setUserId] = useState('all');
   const [status, setStatus] = useState<PaymentStatusFilter>('all');
-  const [paymentType, setPaymentType] = useState<PaymentTypeFilter>('all');
   const filteredPayments = useMemo(
-    () => payments.filter((payment) => matchesPayment(payment, search, userId, status, paymentType)),
-    [paymentType, payments, search, status, userId],
+    () => payments.filter((payment) => matchesPayment(payment, search, userId, status)),
+    [payments, search, status, userId],
   );
   const userOptions = useMemo(() => {
     const users = new Map(payments.map((payment) => [payment.user_id, payment.user_name]));
@@ -75,7 +69,6 @@ export function OperationsView({ payments }: { payments: AdminYooMoneyPayment[] 
     setSearch('');
     setUserId('all');
     setStatus('all');
-    setPaymentType('all');
   };
   const paymentColumns: DataTableColumn<AdminYooMoneyPayment>[] = [
     {
@@ -128,15 +121,6 @@ export function OperationsView({ payments }: { payments: AdminYooMoneyPayment[] 
       render: (payment) => payment.received_amount ? formatMoney(payment.received_amount) : '—',
     },
     {
-      id: 'payment_type',
-      label: 'Способ',
-      compare: (left, right) => paymentCollator.compare(
-        paymentTypeLabel(left.payment_type),
-        paymentTypeLabel(right.payment_type),
-      ),
-      render: (payment) => <span className={styles.method}>{paymentTypeLabel(payment.payment_type)}</span>,
-    },
-    {
       id: 'details',
       label: 'Детали',
       headerVisuallyHidden: true,
@@ -169,12 +153,11 @@ export function OperationsView({ payments }: { payments: AdminYooMoneyPayment[] 
       </SummaryCards>
 
       <TopUpFilters
-        value={{ search, userId, status, paymentType }}
+        value={{ search, userId, status }}
         userOptions={userOptions}
         onSearchChange={setSearch}
         onUserChange={setUserId}
         onStatusChange={setStatus}
-        onPaymentTypeChange={setPaymentType}
         onReset={resetFilters}
       />
 

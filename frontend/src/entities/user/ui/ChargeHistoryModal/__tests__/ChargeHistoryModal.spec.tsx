@@ -52,9 +52,11 @@ describe('ChargeHistoryModal', () => {
     expect(screen.getByText('Дата')).toBeInTheDocument();
     expect(screen.getByText('Тарифный план')).toBeInTheDocument();
     expect(screen.getByText('Сумма')).toBeInTheDocument();
+    expect(screen.getAllByText('−32,26 ₽')).toHaveLength(2);
 
     await user.click(screen.getByRole('button', { name: /Июль 2026/i }));
     expect(screen.getByText('TP_01.07.2026')).toBeInTheDocument();
+    expect(screen.getAllByText('−64,52 ₽')).toHaveLength(2);
     expect(screen.queryByText('TP_01.08.2026')).not.toBeInTheDocument();
   });
 

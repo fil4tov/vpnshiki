@@ -61,7 +61,7 @@ function groupRuns(runs: TariffPlanBillingRun[]): MonthlyHistoryGroup[] {
         monthLabelFormatter.format(billingDate(monthRuns[0].billing_date)).replace(/\s+г\.$/, ''),
       ),
       countLabel: pluralize(monthRuns.length, 'расчёт', 'расчёта', 'расчётов'),
-      total: formatMoney((totalInCents / 100).toFixed(2)),
+      total: `−${formatMoney((totalInCents / 100).toFixed(2))}`,
       rows: monthRuns.map((run) => ({
         id: run.id,
         dateTime: run.billing_date,

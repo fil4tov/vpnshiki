@@ -54,11 +54,16 @@ describe('TariffPlanBillingHistoryModal', () => {
       headers,
     );
     expect(screen.getByText('−32,26 ₽')).toBeInTheDocument();
-    expect(screen.getByText('−64,52 ₽')).toBeInTheDocument();
+    expect(within(screen.getByRole('button', { name: /Август 2026/i })).getByText('−64,52 ₽'))
+      .toBeInTheDocument();
+    expect(screen.getByText('−64,52 ₽', { selector: '[data-label="Всего списано"]' }))
+      .toBeInTheDocument();
     expect(screen.queryByText('1 пользователь')).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /Июль 2026/i }));
     expect(screen.getByText('1 пользователь')).toBeInTheDocument();
+    expect(within(screen.getByRole('button', { name: /Июль 2026/i })).getByText('−64,52 ₽'))
+      .toBeInTheDocument();
     expect(screen.queryByText('2 пользователя')).not.toBeInTheDocument();
   });
 });

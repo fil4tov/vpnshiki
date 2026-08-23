@@ -4,7 +4,8 @@
 .details dd { min-width: 0; margin: 0; font-size: .73rem; }
 .copyValue dd { display: flex; align-items: center; gap: 6px; }
 .copyValue code { overflow: hidden; color: var(--text); font-family: var(--font-data); font-size: .67rem; text-overflow: ellipsis; white-space: nowrap; }
-.copyValue button { display: grid; flex: 0 0 28px; width: 28px; height: 28px; place-items: center; color: var(--text-muted); cursor: pointer; background: transparent; border: 1px solid var(--border); border-radius: 8px; }
+.copyValue button { display: grid; flex: 0 0 28px; width: 28px; height: 28px; padding: 0; place-items: center; color: var(--text-muted); line-height: 0; cursor: pointer; appearance: none; background: transparent; border: 1px solid var(--border); border-radius: 8px; }
+.copyValue button svg { display: block; width: 1em; height: 1em; }
 .copyValue button:hover { color: var(--text); border-color: var(--border-strong); }
 .copyValue button:focus-visible { outline: none; box-shadow: var(--focus); }
 .money { font-family: var(--font-data); }

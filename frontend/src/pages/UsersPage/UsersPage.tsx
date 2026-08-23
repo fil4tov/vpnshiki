@@ -113,13 +113,13 @@ export function UsersPage() {
     },
     {
       id: 'name',
-      label: 'Пользователь',
+      label: 'Имя',
       compare: (left, right) => userCollator.compare(right.name, left.name),
       cellClassName: styles.personCell,
       render: (user) => (
         <div className={styles.person}>
-          <span>{user.name.slice(0, 1).toUpperCase()}</span>
-          <div><strong>{user.name}</strong><small>{user.role === 'admin' ? 'Администратор' : 'Участник'}</small></div>
+          <strong>{user.name}</strong>
+          <small>{user.role === 'admin' ? 'Администратор' : 'Участник'}</small>
         </div>
       ),
     },
@@ -168,7 +168,7 @@ export function UsersPage() {
     },
     {
       id: 'totalCharged',
-      label: 'Всего списаний',
+      label: 'Списания',
       compare: (left, right) => Number(left.total_charged) - Number(right.total_charged),
       cellClassName: styles.money,
       render: (user) => (
@@ -185,7 +185,7 @@ export function UsersPage() {
     },
     {
       id: 'totalTopUps',
-      label: 'Всего пополнений',
+      label: 'Пополнения',
       compare: (left, right) => Number(left.total_top_ups) - Number(right.total_top_ups),
       cellClassName: styles.money,
       render: (user) => (

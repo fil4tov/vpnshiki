@@ -110,7 +110,7 @@ export function TopUpHistoryModal({
       onClose={onClose}
     >
       <HistorySummary items={[
-        { label: 'Пополнено за всё время', value: totalValue ? `+${formatMoney(totalValue)}` : '—', accent: true },
+        { label: 'Пополнено за всё время', value: totalValue ? formatMoney(totalValue) : '—', accent: true },
         { label: 'Период', value: historyQuery.data ? `${groups.length} мес.` : '—' },
       ]} />
 

@@ -17,9 +17,7 @@ td { padding: 15px 18px; border-top: 1px solid var(--border); }
 .tableWrap .idColumn { width: 1%; padding-inline: 8px; text-align: center; white-space: nowrap; }
 tbody tr { transition: background 140ms ease; }
 tbody tr:hover { background: var(--surface-muted); }
-.person { display: flex; align-items: center; gap: 11px; }
-.person > span { display: grid; flex: 0 0 38px; height: 38px; place-items: center; font-size: .8rem; font-weight: 720; background: var(--accent-soft); border: 1px solid var(--border-strong); border-radius: 11px; }
-.person div { display: grid; gap: 3px; }
+.person { display: grid; gap: 3px; }
 .person strong { font-size: .84rem; }
 .person small { color: var(--text-muted); font-size: .68rem; }
 .money { font-family: var(--font-data); font-size: .78rem; white-space: nowrap; }
@@ -53,9 +51,12 @@ tbody tr:hover { background: var(--surface-muted); }
   .tableWrap tbody tr { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; }
   td { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 7px 0; border: 0; }
   td::before { content: attr(data-label); color: var(--text-muted); font-size: .68rem; }
-  .tableWrap td { grid-column: 1 / -1; }
-  .tableWrap .personCell { grid-row: 1; grid-column: 1; min-width: 0; padding: 0 0 12px; }
+  .tableWrap td { grid-column: 1 / -1; text-align: right; }
+  .tableWrap td::before { flex: 0 0 auto; margin-right: auto; text-align: left; }
+  .tableWrap .personCell { grid-row: 1; grid-column: 1; min-width: 0; padding: 0 0 12px; text-align: left; }
   .tableWrap .idColumn { grid-row: 1; grid-column: 2; width: auto; align-self: center; padding: 0 0 12px; }
+  .tableWrap .statusValue,
+  .tableWrap .transactionTotal { width: auto; justify-content: flex-end; margin-left: auto; }
   .personCell::before, .idColumn::before, .rowActions::before { display: none; }
   .rowActions { justify-content: flex-end; }
 }

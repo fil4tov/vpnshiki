@@ -70,10 +70,13 @@ describe('UsersPage', () => {
     expect(await screen.findByText('online-user')).toBeInTheDocument();
     const header = screen.getAllByRole('row')[0];
     const headers = within(header).getAllByRole('columnheader').map((cell) => cell.textContent);
-    expect(headers.slice(0, 4)).toEqual(['ID', 'Пользователь', 'Статус', 'VPN']);
+    expect(headers.slice(0, 4)).toEqual(['ID', 'Имя', 'Статус', 'VPN']);
     expect(headers.slice(-2)).toEqual(['TG ID', 'Действия']);
     expect(headers).not.toContain('История списаний');
     const onlineRow = within(screen.getByText('online-user').closest('tr')!);
+    const userCell = screen.getByText('online-user').closest('td')!;
+    expect(within(userCell).queryByText('O')).not.toBeInTheDocument();
+    expect(within(userCell).getByText('Участник')).toBeInTheDocument();
     const copyIdButton = onlineRow.getByRole('button', {
       name: 'Скопировать ID пользователя online-user',
     });
@@ -102,12 +105,12 @@ describe('UsersPage', () => {
       name: 'Открыть историю списаний online-user',
     });
     expect(historyButton).toHaveTextContent('');
-    expect(historyButton.closest('td')).toHaveAttribute('data-label', 'Всего списаний');
+    expect(historyButton.closest('td')).toHaveAttribute('data-label', 'Списания');
     const topUpHistoryButton = onlineRow.getByRole('button', {
       name: 'Открыть историю пополнений online-user',
     });
     expect(topUpHistoryButton).toHaveTextContent('');
-    expect(topUpHistoryButton.closest('td')).toHaveAttribute('data-label', 'Всего пополнений');
+    expect(topUpHistoryButton.closest('td')).toHaveAttribute('data-label', 'Пополнения');
     const telegramId = onlineRow.getByText('258373830');
     expect(telegramId.closest('td')).toHaveAttribute('data-label', 'TG ID');
     expect(within(screen.getByText('offline-user').closest('tr')!).getByText('—')).toBeInTheDocument();
@@ -158,13 +161,13 @@ describe('UsersPage', () => {
       within(row).getByText(/^(online|offline|unknown)-user$/).textContent,
     );
     const descendingOrders: Array<[string, string[]]> = [
-      ['Пользователь', ['offline-user', 'online-user', 'unknown-user']],
+      ['Имя', ['offline-user', 'online-user', 'unknown-user']],
       ['Статус', ['online-user', 'offline-user', 'unknown-user']],
       ['VPN', ['online-user', 'offline-user', 'unknown-user']],
       ['Баланс', ['offline-user', 'unknown-user', 'online-user']],
       ['Лимит', ['unknown-user', 'online-user', 'offline-user']],
-      ['Всего списаний', ['offline-user', 'unknown-user', 'online-user']],
-      ['Всего пополнений', ['offline-user', 'unknown-user', 'online-user']],
+      ['Списания', ['offline-user', 'unknown-user', 'online-user']],
+      ['Пополнения', ['offline-user', 'unknown-user', 'online-user']],
     ];
 
     for (const [label, order] of descendingOrders) {
@@ -174,7 +177,7 @@ describe('UsersPage', () => {
       expect(rowNames()).toEqual(order);
     }
 
-    const totalTopUpsSort = screen.getByRole('button', { name: 'Всего пополнений' });
+    const totalTopUpsSort = screen.getByRole('button', { name: 'Пополнения' });
     await user.click(totalTopUpsSort);
     expect(totalTopUpsSort.closest('th')).toHaveAttribute('aria-sort', 'ascending');
     expect(rowNames()).toEqual(['online-user', 'unknown-user', 'offline-user']);

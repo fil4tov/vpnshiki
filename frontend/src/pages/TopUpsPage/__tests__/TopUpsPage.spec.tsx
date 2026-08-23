@@ -64,11 +64,11 @@ describe('TopUpsPage', () => {
 
     const userFilter = screen.getByRole('combobox', { name: 'Пользователь' });
     const statusFilter = screen.getByRole('combobox', { name: 'Статус' });
-    const paymentTypeFilter = screen.getByRole('combobox', { name: 'Способ' });
+    expect(screen.queryByRole('combobox', { name: 'Способ' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('columnheader', { name: 'Способ' })).not.toBeInTheDocument();
     expect(screen.queryByText(/из 2 платежей/)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Очистить фильтр «Пользователь»' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Очистить фильтр «Статус»' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Очистить фильтр «Способ»' })).not.toBeInTheDocument();
 
     await user.click(userFilter);
     expect(screen.getAllByRole('option').map((option) => option.textContent)).toEqual(['Все', 'Алина', 'Максим']);
@@ -85,13 +85,6 @@ describe('TopUpsPage', () => {
     expect(screen.getByText('Максим')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Очистить фильтр «Статус»' }));
     expect(statusFilter).toHaveTextContent('Все');
-    expect(screen.getByText('Алина')).toBeInTheDocument();
-
-    await user.click(paymentTypeFilter);
-    await user.click(screen.getByRole('option', { name: 'Карта' }));
-    expect(screen.queryByText('Алина')).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Очистить фильтр «Способ»' }));
-    expect(paymentTypeFilter).toHaveTextContent('Все');
     expect(screen.getByText('Алина')).toBeInTheDocument();
 
     await user.type(search, 'operation-one');
@@ -125,7 +118,7 @@ describe('TopUpsPage', () => {
     renderPage();
 
     const table = await screen.findByRole('table');
-    const headers = ['Создан', 'Пользователь', 'Статус', 'Запрошено', 'Зачислено', 'Способ'];
+    const headers = ['Создан', 'Пользователь', 'Статус', 'Запрошено', 'Зачислено'];
     expect(screen.getByRole('columnheader', { name: 'Создан' })).toHaveAttribute('aria-sort', 'descending');
     expect(within(within(table).getAllByRole('row')[1]!).getByText('Алина')).toBeInTheDocument();
 

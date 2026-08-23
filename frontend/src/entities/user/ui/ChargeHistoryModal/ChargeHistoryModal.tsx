@@ -68,7 +68,7 @@ function groupCharges(charges: UserCharge[], includeTariffPlan: boolean): Monthl
         monthLabelFormatter.format(new Date(monthCharges[0].created_at)).replace(/\s+г\.$/, ''),
       ),
       countLabel: formatChargeCount(monthCharges.length),
-      total: formatMoney((totalInCents / 100).toFixed(2)),
+      total: `−${formatMoney((totalInCents / 100).toFixed(2))}`,
       rows: monthCharges.map((charge) => ({
         id: charge.id,
         dateTime: charge.created_at,

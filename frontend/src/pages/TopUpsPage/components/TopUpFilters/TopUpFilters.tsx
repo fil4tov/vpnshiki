@@ -5,7 +5,6 @@ import type { FieldSelectOption } from '#shared/ui';
 
 import type {
   PaymentStatusFilter,
-  PaymentTypeFilter,
   TopUpFiltersValue,
 } from '../../types';
 import styles from './TopUpFilters.module.scss';
@@ -16,20 +15,12 @@ const statusOptions = [
   { value: 'succeeded', label: 'Зачислен' },
 ] as const;
 
-const paymentTypeOptions = [
-  { value: 'all', label: 'Все' },
-  { value: 'AC', label: 'Карта' },
-  { value: 'PC', label: 'Кошелёк' },
-  { value: 'unknown', label: 'Не определён' },
-] as const;
-
 interface TopUpFiltersProps {
   value: TopUpFiltersValue;
   userOptions: readonly FieldSelectOption[];
   onSearchChange: (value: string) => void;
   onUserChange: (value: string) => void;
   onStatusChange: (value: PaymentStatusFilter) => void;
-  onPaymentTypeChange: (value: PaymentTypeFilter) => void;
   onReset: () => void;
 }
 
@@ -39,13 +30,11 @@ export function TopUpFilters({
   onSearchChange,
   onUserChange,
   onStatusChange,
-  onPaymentTypeChange,
   onReset,
 }: TopUpFiltersProps) {
   const hasActiveFilters = Boolean(value.search)
     || value.userId !== 'all'
-    || value.status !== 'all'
-    || value.paymentType !== 'all';
+    || value.status !== 'all';
 
   return (
     <div className={styles.filters}>
@@ -95,23 +84,6 @@ export function TopUpFilters({
               className={styles.clearFilter}
               onClick={() => onStatusChange('all')}
               aria-label="Очистить фильтр «Статус»"
-            ><FiX aria-hidden="true" /></button>
-          )}
-        </div>
-        <div className={styles.filterControl}>
-          <FieldSelect
-            className={styles.select}
-            label="Способ"
-            options={paymentTypeOptions}
-            value={value.paymentType}
-            onChange={(nextValue) => onPaymentTypeChange(nextValue as PaymentTypeFilter)}
-          />
-          {value.paymentType !== 'all' && (
-            <button
-              type="button"
-              className={styles.clearFilter}
-              onClick={() => onPaymentTypeChange('all')}
-              aria-label="Очистить фильтр «Способ»"
             ><FiX aria-hidden="true" /></button>
           )}
         </div>

@@ -41,7 +41,8 @@ describe('TopUpHistoryModal', () => {
 
     expect(await screen.findAllByText('1 пополнение')).toHaveLength(2);
     expect(getUserTopUps).toHaveBeenCalledWith('user-one');
-    expect(screen.getByText('+150,00 ₽')).toBeInTheDocument();
+    expect(screen.getByText('150,00 ₽')).toBeInTheDocument();
+    expect(screen.queryByText('+150,00 ₽')).not.toBeInTheDocument();
     expect(screen.getByText('Дата')).toBeInTheDocument();
     expect(screen.getByText('Сумма')).toBeInTheDocument();
     expect(screen.queryByText('Тарифный план')).not.toBeInTheDocument();
@@ -58,7 +59,7 @@ describe('TopUpHistoryModal', () => {
 
     expect(await screen.findByText('У пользователя пока не было пополнений.')).toBeInTheDocument();
     expect(getMyTopUps).toHaveBeenCalledOnce();
-    expect(screen.getByText('+0,00 ₽')).toBeInTheDocument();
+    expect(screen.getByText('0,00 ₽')).toBeInTheDocument();
   });
 
   it('renders a retry state when history cannot be loaded', async () => {
