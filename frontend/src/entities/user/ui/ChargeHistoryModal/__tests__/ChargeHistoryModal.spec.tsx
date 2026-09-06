@@ -35,36 +35,46 @@ describe('ChargeHistoryModal', () => {
     vi.mocked(getUserCharges).mockResolvedValue([
       {
         id: 'august', amount: '32.26', tariff_plan_id: 'plan-august',
-        tariff_plan_name: 'TP_01.08.2026', created_at: '2026-08-15T21:00:00Z',
+        tariff_plan_name: 'TP_01.08.2026', kind: 'tarification',
+        additional_profiles_count: null, created_at: '2026-08-15T21:00:00Z',
+      },
+      {
+        id: 'august-extra', amount: '16.13', tariff_plan_id: 'plan-august',
+        tariff_plan_name: 'TP_01.08.2026', kind: 'additional_profiles',
+        additional_profiles_count: 1, created_at: '2026-08-15T21:00:00Z',
       },
       {
         id: 'july', amount: '64.52', tariff_plan_id: 'plan-july',
-        tariff_plan_name: 'TP_01.07.2026', created_at: '2026-07-30T21:00:00Z',
+        tariff_plan_name: 'TP_01.07.2026', kind: 'tarification',
+        additional_profiles_count: null, created_at: '2026-07-30T21:00:00Z',
       },
     ]);
     const user = userEvent.setup();
     renderModal('admin', '96.78');
 
-    expect(await screen.findByText('TP_01.08.2026')).toBeInTheDocument();
+    expect(await screen.findByText('TP_01.08.2026 · Тарификация')).toBeInTheDocument();
+    expect(screen.getByText('TP_01.08.2026 · Дополнительные профили · 1 шт.'))
+      .toBeInTheDocument();
     expect(getUserCharges).toHaveBeenCalledWith('user-one');
     expect(getMyCharges).not.toHaveBeenCalled();
     expect(screen.getByText('96,78 ₽')).toBeInTheDocument();
     expect(screen.getByText('Дата')).toBeInTheDocument();
-    expect(screen.getByText('Тарифный план')).toBeInTheDocument();
+    expect(screen.getByText('Тариф и тип')).toBeInTheDocument();
     expect(screen.getByText('Сумма')).toBeInTheDocument();
-    expect(screen.getAllByText('−32,26 ₽')).toHaveLength(2);
+    expect(screen.getByText('−32,26 ₽')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /Июль 2026/i }));
-    expect(screen.getByText('TP_01.07.2026')).toBeInTheDocument();
+    expect(screen.getByText('TP_01.07.2026 · Тарификация')).toBeInTheDocument();
     expect(screen.getAllByText('−64,52 ₽')).toHaveLength(2);
-    expect(screen.queryByText('TP_01.08.2026')).not.toBeInTheDocument();
+    expect(screen.queryByText('TP_01.08.2026 · Тарификация')).not.toBeInTheDocument();
   });
 
   it('uses the self endpoint without the tariff plan column', async () => {
     vi.mocked(getMyCharges).mockResolvedValue([
       {
         id: 'self-charge', amount: '32.26', tariff_plan_id: 'plan-august',
-        tariff_plan_name: 'TP_01.08.2026', created_at: '2026-08-15T21:00:00Z',
+        tariff_plan_name: 'TP_01.08.2026', kind: 'tarification',
+        additional_profiles_count: null, created_at: '2026-08-15T21:00:00Z',
       },
     ]);
     renderModal('self');
@@ -72,7 +82,8 @@ describe('ChargeHistoryModal', () => {
     expect(await screen.findByText('Дата')).toBeInTheDocument();
     expect(getMyCharges).toHaveBeenCalledOnce();
     expect(screen.getByText('Сумма')).toBeInTheDocument();
-    expect(screen.queryByText('Тарифный план')).not.toBeInTheDocument();
+    expect(screen.getByText('Тип')).toBeInTheDocument();
+    expect(screen.getByText('Тарификация')).toBeInTheDocument();
     expect(screen.queryByText('TP_01.08.2026')).not.toBeInTheDocument();
   });
 

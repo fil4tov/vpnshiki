@@ -51,6 +51,13 @@ function getMonthKey(createdAt: string) {
   return `${year}-${month}`;
 }
 
+function chargeDescription(charge: UserCharge) {
+  if (charge.kind === 'additional_profiles') {
+    return `Дополнительные профили · ${charge.additional_profiles_count ?? 0} шт.`;
+  }
+  return 'Тарификация';
+}
+
 function groupCharges(charges: UserCharge[], includeTariffPlan: boolean): MonthlyHistoryGroup[] {
   const groups = new Map<string, UserCharge[]>();
   charges.forEach((charge) => {
@@ -73,7 +80,9 @@ function groupCharges(charges: UserCharge[], includeTariffPlan: boolean): Monthl
         id: charge.id,
         dateTime: charge.created_at,
         dateLabel: dateFormatter.format(new Date(charge.created_at)),
-        ...(includeTariffPlan ? { description: charge.tariff_plan_name } : {}),
+        description: includeTariffPlan
+          ? `${charge.tariff_plan_name} · ${chargeDescription(charge)}`
+          : chargeDescription(charge),
         amount: `−${formatMoney(charge.amount)}`,
       })),
     };
@@ -132,7 +141,7 @@ export function ChargeHistoryModal({
           groups={groups}
           columnLabels={{
             date: 'Дата',
-            ...(mode === 'admin' ? { description: 'Тарифный план' } : {}),
+            description: mode === 'admin' ? 'Тариф и тип' : 'Тип',
             amount: 'Сумма',
           }}
         />

@@ -89,6 +89,28 @@ def test_profile_matching_is_case_insensitive_and_has_a_strict_boundary() -> Non
     assert not profile_matches("[web]-moxxie", "web-moxxie")
 
 
+async def test_client_lists_emails_independently_of_profile_state() -> None:
+    async def handler(_request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "success": True,
+                "obj": [
+                    {"email": "web-user-pc", "enable": False},
+                    {"email": "web-user-mobile"},
+                    {"email": "web-user-pc", "enable": True},
+                    {"email": 42, "enable": True},
+                ],
+            },
+        )
+
+    emails = await XuiClient(
+        vpn_settings(), transport=httpx.MockTransport(handler)
+    ).list_client_emails()
+
+    assert emails == ["web-user-mobile", "web-user-pc"]
+
+
 async def test_client_lists_and_fetches_all_matching_profiles() -> None:
     emails = [
         "web-Миша-mobile",

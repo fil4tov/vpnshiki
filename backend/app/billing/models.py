@@ -28,6 +28,11 @@ class BillingRunStatus(StrEnum):
     FAILED = "failed"
 
 
+class DailyChargeKind(StrEnum):
+    TARIFICATION = "tarification"
+    ADDITIONAL_PROFILES = "additional_profiles"
+
+
 class StatusChangeSource(StrEnum):
     BOOTSTRAP = "bootstrap"
     ADMIN = "admin"
@@ -47,13 +52,52 @@ class UserDailyCharge(Base):
     tariff_plan_id: Mapped[UUID] = mapped_column(
         Uuid(as_uuid=True), ForeignKey("tariff_plans.id", ondelete="RESTRICT"), nullable=False
     )
+    kind: Mapped[str] = mapped_column(
+        String(24), nullable=False, default=DailyChargeKind.TARIFICATION.value
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     __table_args__ = (
-        UniqueConstraint("user_id", "created_at", name="uq_user_daily_charges_user_created"),
+        UniqueConstraint(
+            "user_id",
+            "created_at",
+            "kind",
+            name="uq_user_daily_charges_user_created_kind",
+        ),
         CheckConstraint("amount >= 0", name="ck_user_daily_charges_amount_nonnegative"),
+        CheckConstraint(
+            "kind IN ('tarification', 'additional_profiles')",
+            name="ck_user_daily_charges_kind",
+        ),
         Index("ix_user_daily_charges_created_at", "created_at"),
         Index("ix_user_daily_charges_tariff_plan_id", "tariff_plan_id"),
+    )
+
+
+class UserProfileCount(Base):
+    __tablename__ = "user_profile_counts"
+
+    id: Mapped[UUID] = mapped_column(Uuid(as_uuid=True), primary_key=True, default=uuid4)
+    user_id: Mapped[UUID] = mapped_column(
+        Uuid(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), nullable=False
+    )
+    billing_date: Mapped[date] = mapped_column(Date, nullable=False)
+    profile_count: Mapped[int] = mapped_column(Integer, nullable=False)
+    captured_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=lambda: datetime.now(UTC)
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id",
+            "billing_date",
+            name="uq_user_profile_counts_user_billing_date",
+        ),
+        CheckConstraint(
+            "profile_count >= 0",
+            name="ck_user_profile_counts_profile_count_nonnegative",
+        ),
+        Index("ix_user_profile_counts_billing_date", "billing_date"),
     )
 
 

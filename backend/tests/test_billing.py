@@ -2,13 +2,18 @@ import asyncio
 from datetime import UTC, date, datetime
 from decimal import Decimal
 
+import pytest
 from sqlalchemy import func, select
 
 from app.billing import scheduler as billing_scheduler
+from app.billing.calculations import additional_profiles_charge
 from app.billing.models import (
     BillingRun,
+    BillingRunStatus,
+    DailyChargeKind,
     StatusChangeSource,
     UserDailyCharge,
+    UserProfileCount,
     UserStatusHistory,
     VpnSyncJob,
 )
@@ -37,6 +42,173 @@ class RecordingNotificationSender:
         return True
 
 
+class ProfileCountProvider:
+    def __init__(self, emails: list[str]) -> None:
+        self.emails = emails
+        self.calls = 0
+
+    async def list_client_emails(self) -> list[str]:
+        self.calls += 1
+        return self.emails
+
+
+class FailingProfileCountProvider:
+    async def list_client_emails(self) -> list[str]:
+        raise ApiError(
+            status_code=502,
+            code="vpn_provider_unavailable",
+            message="VPN-панель временно недоступна",
+        )
+
+
+def test_additional_profile_charge_rounds_each_profile_half_up() -> None:
+    assert additional_profiles_charge(Decimal("32.25"), 1) == Decimal("0.00")
+    assert additional_profiles_charge(Decimal("32.25"), 2) == Decimal("16.13")
+    assert additional_profiles_charge(Decimal("32.25"), 3) == Decimal("32.26")
+
+
+async def test_daily_billing_charges_aggregated_additional_profiles_and_snapshots_all_users(
+    session_factory,
+    admin,
+) -> None:
+    billing_date = date(2026, 9, 6)
+    created_at = datetime(2026, 9, 5, 12, tzinfo=UTC)
+    provider = ProfileCountProvider(
+        [
+            "web-admin",
+            "web-admin-mobile",
+            "web-admin-pc",
+            "web-admin2-pc",
+            "web-paused-tablet",
+        ]
+    )
+    async with session_factory() as db:
+        user = await db.get(User, admin.id)
+        assert user is not None
+        user.created_at = created_at
+        user.balance = Decimal("500.00")
+        paused_user = User(
+            name="paused",
+            password_hash="unused",
+            account_status=AccountStatus.PAUSED.value,
+            created_at=created_at,
+        )
+        db.add_all(
+            [
+                paused_user,
+                TariffPlan(
+                    name="TP_01.09.2026",
+                    monthly_amount=Decimal("3000.00"),
+                    start_date=date(2026, 9, 1),
+                ),
+            ]
+        )
+        await db.commit()
+
+        run = await process_billing_date(db, billing_date, provider=provider)
+        repeated_run = await process_billing_date(db, billing_date, provider=provider)
+
+        assert repeated_run.id == run.id
+        assert provider.calls == 1
+        assert run.daily_charge == Decimal("100.00")
+        assert run.charged_users_count == 1
+        await db.refresh(user)
+        assert user.balance == Decimal("300.00")
+        charges = list(
+            (
+                await db.scalars(
+                    select(UserDailyCharge)
+                    .where(UserDailyCharge.user_id == user.id)
+                    .order_by(UserDailyCharge.kind.desc())
+                )
+            ).all()
+        )
+        assert [(charge.kind, charge.amount) for charge in charges] == [
+            (DailyChargeKind.TARIFICATION.value, Decimal("100.00")),
+            (DailyChargeKind.ADDITIONAL_PROFILES.value, Decimal("100.00")),
+        ]
+        snapshots = list(
+            (
+                await db.scalars(
+                    select(UserProfileCount).order_by(UserProfileCount.user_id)
+                )
+            ).all()
+        )
+        assert {snapshot.user_id: snapshot.profile_count for snapshot in snapshots} == {
+            user.id: 3,
+            paused_user.id: 1,
+        }
+
+
+async def test_historical_billing_uses_last_profile_snapshot(session_factory, admin) -> None:
+    billing_date = date(2026, 9, 6)
+    async with session_factory() as db:
+        user = await db.get(User, admin.id)
+        assert user is not None
+        user.created_at = datetime(2026, 9, 4, 12, tzinfo=UTC)
+        user.balance = Decimal("500.00")
+        db.add_all(
+            [
+                TariffPlan(
+                    name="TP_01.09.2026",
+                    monthly_amount=Decimal("3000.00"),
+                    start_date=date(2026, 9, 1),
+                ),
+                UserProfileCount(
+                    user_id=user.id,
+                    billing_date=date(2026, 9, 5),
+                    profile_count=2,
+                ),
+            ]
+        )
+        await db.commit()
+
+        await process_billing_date(db, billing_date)
+
+        await db.refresh(user)
+        assert user.balance == Decimal("350.00")
+        assert await db.scalar(
+            select(func.count()).select_from(UserDailyCharge)
+        ) == 2
+
+
+async def test_profile_provider_failure_rolls_back_current_day_billing(
+    session_factory,
+    admin,
+) -> None:
+    billing_date = date(2026, 9, 6)
+    async with session_factory() as db:
+        user = await db.get(User, admin.id)
+        assert user is not None
+        user.created_at = datetime(2026, 9, 5, 12, tzinfo=UTC)
+        user.balance = Decimal("500.00")
+        db.add(
+            TariffPlan(
+                name="TP_01.09.2026",
+                monthly_amount=Decimal("3000.00"),
+                start_date=date(2026, 9, 1),
+            )
+        )
+        await db.commit()
+
+        with pytest.raises(ApiError, match="VPN-панель временно недоступна"):
+            await process_billing_date(
+                db,
+                billing_date,
+                provider=FailingProfileCountProvider(),
+            )
+
+        await db.refresh(user)
+        assert user.balance == Decimal("500.00")
+        assert await db.scalar(select(func.count()).select_from(UserDailyCharge)) == 0
+        assert await db.scalar(select(func.count()).select_from(UserProfileCount)) == 0
+        run = await db.scalar(
+            select(BillingRun).where(BillingRun.billing_date == billing_date)
+        )
+        assert run is not None
+        assert run.status == BillingRunStatus.FAILED.value
+
+
 async def test_vpn_sync_request_wakes_scheduler_without_polling_delay(
     session_factory,
     monkeypatch,
@@ -54,7 +226,7 @@ async def test_vpn_sync_request_wakes_scheduler_without_polling_delay(
             requested_cycle.set()
         return 0
 
-    async def no_op(*_args: object) -> None:
+    async def no_op(*_args: object, **_kwargs: object) -> None:
         return None
 
     monkeypatch.setattr(billing_scheduler, "process_vpn_sync_jobs", process_jobs)
@@ -87,7 +259,7 @@ async def test_daily_paused_sync_wakes_vpn_job_processing(
             processed_after_daily_sync.set()
         return 0
 
-    async def no_op(*_args: object) -> None:
+    async def no_op(*_args: object, **_kwargs: object) -> None:
         return None
 
     async def queue_paused_profile(*_args: object) -> int:

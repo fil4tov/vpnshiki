@@ -41,7 +41,7 @@ function pluralize(value: number, one: string, few: string, many: string) {
 }
 
 function totalChargeInCents(run: TariffPlanBillingRun) {
-  return Math.round(Number(run.daily_charge) * 100) * run.active_users_count;
+  return Math.round(Number(run.total_charged) * 100);
 }
 
 function groupRuns(runs: TariffPlanBillingRun[]): MonthlyHistoryGroup[] {
@@ -133,7 +133,7 @@ export function TariffPlanBillingHistoryModal({
           columnLabels={{
             date: 'Дата',
             description: 'Пользователи',
-            amount: 'Сумма',
+            amount: 'Базовая сумма',
             totalAmount: 'Всего списано',
           }}
         />

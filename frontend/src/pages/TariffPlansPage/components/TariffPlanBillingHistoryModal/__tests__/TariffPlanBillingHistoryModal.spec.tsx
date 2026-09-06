@@ -30,8 +30,14 @@ const plan: TariffPlan = {
 describe('TariffPlanBillingHistoryModal', () => {
   it('shows users, per-user charge, and total daily charge grouped by month', async () => {
     vi.mocked(getTariffPlanBillingHistory).mockResolvedValue([
-      { id: 'august', billing_date: '2026-08-16', daily_charge: '32.26', active_users_count: 2 },
-      { id: 'july', billing_date: '2026-07-31', daily_charge: '64.52', active_users_count: 1 },
+      {
+        id: 'august', billing_date: '2026-08-16', daily_charge: '32.26',
+        active_users_count: 2, total_charged: '80.65',
+      },
+      {
+        id: 'july', billing_date: '2026-07-31', daily_charge: '64.52',
+        active_users_count: 1, total_charged: '64.52',
+      },
     ]);
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const user = userEvent.setup();
@@ -46,17 +52,17 @@ describe('TariffPlanBillingHistoryModal', () => {
     const planName = screen.getByText('TP_01.08.2026');
     expect(title.compareDocumentPosition(planName) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByText('Списано за всё время')).toBeInTheDocument();
-    expect(screen.getByText('129,04 ₽')).toBeInTheDocument();
-    const headers = ['Дата', 'Пользователи', 'Сумма', 'Всего списано'];
+    expect(screen.getByText('145,17 ₽')).toBeInTheDocument();
+    const headers = ['Дата', 'Пользователи', 'Базовая сумма', 'Всего списано'];
     const firstHeader = screen.getByText(headers[0]).parentElement;
     expect(firstHeader).not.toBeNull();
     expect(within(firstHeader as HTMLElement).getAllByText(/.+/).map((cell) => cell.textContent)).toEqual(
       headers,
     );
     expect(screen.getByText('−32,26 ₽')).toBeInTheDocument();
-    expect(within(screen.getByRole('button', { name: /Август 2026/i })).getByText('−64,52 ₽'))
+    expect(within(screen.getByRole('button', { name: /Август 2026/i })).getByText('−80,65 ₽'))
       .toBeInTheDocument();
-    expect(screen.getByText('−64,52 ₽', { selector: '[data-label="Всего списано"]' }))
+    expect(screen.getByText('−80,65 ₽', { selector: '[data-label="Всего списано"]' }))
       .toBeInTheDocument();
     expect(screen.queryByText('1 пользователь')).not.toBeInTheDocument();
 

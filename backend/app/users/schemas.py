@@ -14,6 +14,7 @@ from pydantic import (
 )
 from pydantic_core import PydanticCustomError
 
+from app.billing.models import DailyChargeKind
 from app.users.models import AccountStatus, UserRole
 
 Name = Annotated[str, StringConstraints(strip_whitespace=True, min_length=2, max_length=64)]
@@ -100,6 +101,8 @@ class UserChargeRead(BaseModel):
     amount: Decimal
     tariff_plan_id: UUID
     tariff_plan_name: str
+    kind: DailyChargeKind
+    additional_profiles_count: int | None
     created_at: datetime
 
     @field_serializer("amount")

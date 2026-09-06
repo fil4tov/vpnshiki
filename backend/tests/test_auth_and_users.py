@@ -11,8 +11,10 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from app.auth.models import AuthSession
 from app.auth.security import hash_password
 from app.billing.models import (
+    DailyChargeKind,
     StatusChangeSource,
     UserDailyCharge,
+    UserProfileCount,
     UserStatusHistory,
     VpnSyncJob,
 )
@@ -151,6 +153,18 @@ async def test_admin_creates_and_updates_user(
                     tariff_plan_id=plan.id,
                     created_at=datetime(2026, 8, 2, tzinfo=UTC),
                 ),
+                UserDailyCharge(
+                    user_id=user_id,
+                    amount=Decimal("10.25"),
+                    tariff_plan_id=plan.id,
+                    kind=DailyChargeKind.ADDITIONAL_PROFILES.value,
+                    created_at=datetime(2026, 8, 2, tzinfo=UTC),
+                ),
+                UserProfileCount(
+                    user_id=user_id,
+                    billing_date=date(2026, 8, 2),
+                    profile_count=3,
+                ),
                 YooMoneyPayment(
                     user_id=user_id,
                     label="pay_history_older",
@@ -194,7 +208,7 @@ async def test_admin_creates_and_updates_user(
     }
     assert {user["name"]: user["total_charged"] for user in users} == {
         "admin": "0.00",
-        "Лена": "30.75",
+        "Лена": "41.00",
     }
     assert {user["name"]: user["total_top_ups"] for user in users} == {
         "admin": "0.00",
@@ -209,9 +223,20 @@ async def test_admin_creates_and_updates_user(
     }
     assert all("vpnStatus" not in user for user in users)
     history = (await client.get(f"/api/admin/users/{user_id}/charges")).json()
-    assert [entry["created_at"][:10] for entry in history] == ["2026-08-02", "2026-08-01"]
-    assert [entry["amount"] for entry in history] == ["20.50", "10.25"]
+    assert [entry["created_at"][:10] for entry in history] == [
+        "2026-08-02",
+        "2026-08-02",
+        "2026-08-01",
+    ]
+    assert [entry["amount"] for entry in history] == ["20.50", "10.25", "10.25"]
+    assert [entry["kind"] for entry in history] == [
+        "tarification",
+        "additional_profiles",
+        "tarification",
+    ]
+    assert [entry["additional_profiles_count"] for entry in history] == [None, 2, None]
     assert [entry["tariff_plan_name"] for entry in history] == [
+        "TP_01.08.2026",
         "TP_01.08.2026",
         "TP_01.08.2026",
     ]
@@ -337,7 +362,7 @@ async def test_regular_user_cannot_change_account_status(
         assert unchanged_user.account_status == AccountStatus.ACTIVE.value
 
 
-async def test_daily_charge_uses_current_plan_and_active_users(
+async def test_daily_charge_uses_current_plan_active_users_and_profile_count(
     client: AsyncClient,
     session_factory: async_sessionmaker[AsyncSession],
     admin: User,
@@ -355,12 +380,19 @@ async def test_daily_charge_uses_current_plan_and_active_users(
             )
         )
         db.add(User(name="Участник", password_hash=hash_password("user-password")))
+        db.add(
+            UserProfileCount(
+                user_id=admin.id,
+                billing_date=date(2026, 8, 15),
+                profile_count=2,
+            )
+        )
         await db.commit()
 
     await login(client)
     response = await client.get("/api/users/me/daily-charge")
     assert response.status_code == 200
-    assert response.json() == {"daily_charge": "50.00"}
+    assert response.json() == {"daily_charge": "75.00"}
 
     await client.patch(
         f"/api/admin/users/{admin.id}",

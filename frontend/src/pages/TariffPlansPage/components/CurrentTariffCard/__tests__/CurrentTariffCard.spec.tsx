@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import { afterEach, beforeEach, vi } from 'vitest';
 
 import type { TariffPlan } from '#entities/tariffPlan';
 
@@ -17,6 +18,13 @@ const activePlan: TariffPlan = {
 };
 
 describe('CurrentTariffCard', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-16T12:00:00+03:00'));
+  });
+
+  afterEach(() => vi.useRealTimers());
+
   it('shows the active plan and its daily per-user calculation', () => {
     render(<CurrentTariffCard plan={activePlan} activeUsers={8} />);
 

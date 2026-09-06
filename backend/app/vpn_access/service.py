@@ -160,12 +160,19 @@ class XuiClient:
         return clients
 
     async def find_client_emails(self, profile_prefix: str) -> list[str]:
+        emails = {
+            email
+            for email in await self.list_client_emails()
+            if profile_matches(email, profile_prefix)
+        }
+        return sorted(emails, key=str.casefold)
+
+    async def list_client_emails(self) -> list[str]:
         clients = await self._list_clients()
         emails = {
             email
             for item in clients
             if isinstance((email := item.get("email")), str)
-            and profile_matches(email, profile_prefix)
         }
         return sorted(emails, key=str.casefold)
 

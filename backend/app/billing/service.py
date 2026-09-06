@@ -22,11 +22,14 @@ from app.tariff_plans.models import TariffPlan
 from app.users.models import AccountStatus, User
 from app.vpn_access.service import XuiClient, profile_matches
 
+from .calculations import additional_profiles_charge, profile_count_for_date
 from .models import (
     BillingRun,
     BillingRunStatus,
+    DailyChargeKind,
     StatusChangeSource,
     UserDailyCharge,
+    UserProfileCount,
     UserStatusHistory,
     VpnSyncJob,
 )
@@ -53,6 +56,50 @@ def billing_timestamp(billing_date: date) -> datetime:
 
 def profile_email(user: User) -> str:
     return f"web-{user.name}"
+
+
+async def _capture_profile_counts(
+    db: AsyncSession,
+    provider: XuiClient,
+    billing_date: date,
+) -> None:
+    emails = await provider.list_client_emails()
+    users = list(
+        (
+            await db.scalars(
+                select(User)
+                .where(User.deleted_at.is_(None))
+                .order_by(User.id)
+            )
+        ).all()
+    )
+    existing_counts = {
+        item.user_id: item
+        for item in (
+            await db.scalars(
+                select(UserProfileCount).where(
+                    UserProfileCount.billing_date == billing_date
+                )
+            )
+        ).all()
+    }
+    captured_at = datetime.now(UTC)
+    for user in users:
+        prefix = profile_email(user)
+        profile_count = sum(profile_matches(email, prefix) for email in emails)
+        snapshot = existing_counts.get(user.id)
+        if snapshot is None:
+            db.add(
+                UserProfileCount(
+                    user_id=user.id,
+                    billing_date=billing_date,
+                    profile_count=profile_count,
+                    captured_at=captured_at,
+                )
+            )
+        else:
+            snapshot.profile_count = profile_count
+            snapshot.captured_at = captured_at
 
 
 async def record_status_change(
@@ -297,7 +344,11 @@ async def _billing_lock(db: AsyncSession) -> None:
         )
 
 
-async def _process_billing_date(db: AsyncSession, billing_date: date) -> BillingDateResult:
+async def _process_billing_date(
+    db: AsyncSession,
+    billing_date: date,
+    provider: XuiClient | None = None,
+) -> BillingDateResult:
     try:
         await _billing_lock(db)
         run = await db.scalar(
@@ -338,6 +389,9 @@ async def _process_billing_date(db: AsyncSession, billing_date: date) -> Billing
         run.tariff_plan_id = plan.id
         await _ensure_status_baselines(db, plan.start_date)
         await db.flush()
+        if provider is not None:
+            await _capture_profile_counts(db, provider, billing_date)
+            await db.flush()
         cutoff = billing_timestamp(billing_date)
         active_users = await _active_users_at(db, cutoff)
         run.active_users_count = len(active_users)
@@ -357,16 +411,31 @@ async def _process_billing_date(db: AsyncSession, billing_date: date) -> Billing
         blocked = 0
         notifications: dict[UUID, BalanceNotification] = {}
         for user in active_users:
+            profile_count = await profile_count_for_date(db, user.id, billing_date)
+            additional_profiles_count = max((profile_count or 0) - 1, 0)
+            additional_amount = additional_profiles_charge(amount, profile_count or 0)
+            total_amount = amount + additional_amount
             balance_before = user.balance
-            user.balance -= amount
+            user.balance -= total_amount
             db.add(
                 UserDailyCharge(
                     user_id=user.id,
                     amount=amount,
                     tariff_plan_id=plan.id,
+                    kind=DailyChargeKind.TARIFICATION.value,
                     created_at=cutoff,
                 )
             )
+            if additional_profiles_count:
+                db.add(
+                    UserDailyCharge(
+                        user_id=user.id,
+                        amount=additional_amount,
+                        tariff_plan_id=plan.id,
+                        kind=DailyChargeKind.ADDITIONAL_PROFILES.value,
+                        created_at=cutoff,
+                    )
+                )
             became_blocked = user.balance < -user.negative_balance_limit
             if became_blocked:
                 blocked += 1
@@ -388,7 +457,7 @@ async def _process_billing_date(db: AsyncSession, billing_date: date) -> Billing
                 daily_balance_notification(
                     user,
                     balance_before=balance_before,
-                    daily_charge=amount,
+                    daily_charge=total_amount,
                     became_blocked=became_blocked,
                 ),
             )
@@ -425,8 +494,10 @@ async def process_billing_date(
     db: AsyncSession,
     billing_date: date,
     sender: NotificationSender | None = None,
+    *,
+    provider: XuiClient | None = None,
 ) -> BillingRun:
-    result = await _process_billing_date(db, billing_date)
+    result = await _process_billing_date(db, billing_date, provider)
     if sender is not None:
         await send_balance_notifications(sender, result.notifications)
     return result.run
@@ -436,6 +507,8 @@ async def catch_up_billing(
     db: AsyncSession,
     through_date: date | None = None,
     sender: NotificationSender | None = None,
+    *,
+    provider: XuiClient | None = None,
 ) -> list[BillingRun]:
     target_date = through_date or moscow_today()
     current_plan = await _plan_for_date(db, target_date)
@@ -448,7 +521,8 @@ async def catch_up_billing(
     runs: list[BillingRun] = []
     billing_date = current_plan.start_date
     while billing_date <= target_date:
-        result = await _process_billing_date(db, billing_date)
+        live_provider = provider if through_date is None and billing_date == target_date else None
+        result = await _process_billing_date(db, billing_date, live_provider)
         runs.append(result.run)
         for notification in result.notifications:
             merge_balance_notification(notifications, notification)

@@ -54,7 +54,12 @@ class BillingScheduler:
         while not self._stop.is_set():
             try:
                 async with self._session_factory() as db:
-                    await catch_up_billing(db, None, self._notifier)
+                    await catch_up_billing(
+                        db,
+                        None,
+                        self._notifier,
+                        provider=self._provider,
+                    )
                     queued_syncs = await sync_paused_profiles(db, self._provider)
                     if queued_syncs:
                         request_vpn_sync_processing()

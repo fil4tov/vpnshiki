@@ -3,9 +3,15 @@ from decimal import Decimal
 from uuid import UUID
 
 from httpx import AsyncClient
+from sqlalchemy import select
 
 from app.auth.security import hash_password
-from app.billing.models import BillingRun, BillingRunStatus
+from app.billing.models import (
+    BillingRun,
+    BillingRunStatus,
+    DailyChargeKind,
+    UserDailyCharge,
+)
 from app.users.models import User
 
 
@@ -149,6 +155,11 @@ async def test_tariff_plan_billing_history_contains_daily_rate_and_user_count(
     plan = (await create_plan(client, "2000.00", "2026-08-01")).json()
     plan_id = UUID(plan["id"])
     async with session_factory() as db:
+        admin = await db.scalar(select(User).order_by(User.created_at).limit(1))
+        assert admin is not None
+        second_user = User(name="second-user", password_hash="unused")
+        db.add(second_user)
+        await db.flush()
         db.add_all(
             [
                 BillingRun(
@@ -178,6 +189,31 @@ async def test_tariff_plan_billing_history_contains_daily_rate_and_user_count(
                     daily_charge=None,
                     completed_at=datetime.now(UTC),
                 ),
+                UserDailyCharge(
+                    user_id=admin.id,
+                    amount=Decimal("32.26"),
+                    tariff_plan_id=plan_id,
+                    created_at=datetime(2026, 8, 15, 21, tzinfo=UTC),
+                ),
+                UserDailyCharge(
+                    user_id=second_user.id,
+                    amount=Decimal("32.26"),
+                    tariff_plan_id=plan_id,
+                    created_at=datetime(2026, 8, 15, 21, tzinfo=UTC),
+                ),
+                UserDailyCharge(
+                    user_id=admin.id,
+                    amount=Decimal("16.13"),
+                    tariff_plan_id=plan_id,
+                    kind=DailyChargeKind.ADDITIONAL_PROFILES.value,
+                    created_at=datetime(2026, 8, 15, 21, tzinfo=UTC),
+                ),
+                UserDailyCharge(
+                    user_id=admin.id,
+                    amount=Decimal("64.52"),
+                    tariff_plan_id=plan_id,
+                    created_at=datetime(2026, 8, 14, 21, tzinfo=UTC),
+                ),
             ]
         )
         await db.commit()
@@ -186,11 +222,16 @@ async def test_tariff_plan_billing_history_contains_daily_rate_and_user_count(
 
     assert response.status_code == 200
     assert [
-        (item["billing_date"], item["daily_charge"], item["active_users_count"])
+        (
+            item["billing_date"],
+            item["daily_charge"],
+            item["active_users_count"],
+            item["total_charged"],
+        )
         for item in response.json()
     ] == [
-        ("2026-08-16", "32.26", 2),
-        ("2026-08-15", "64.52", 1),
+        ("2026-08-16", "32.26", 2, "80.65"),
+        ("2026-08-15", "64.52", 1, "64.52"),
     ]
 
 

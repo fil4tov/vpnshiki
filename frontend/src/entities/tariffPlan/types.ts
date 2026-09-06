@@ -22,6 +22,7 @@ export interface TariffPlanBillingRun {
   billing_date: string;
   daily_charge: string;
   active_users_count: number;
+  total_charged: string;
 }
 
 export type TariffPlanUpdatePayload = Partial<TariffPlanPayload>;

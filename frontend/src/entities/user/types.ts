@@ -3,6 +3,7 @@ export type AccountStatus = 'active' | 'paused' | 'blocked';
 export type AccountBlockSource = 'billing' | 'admin';
 export type VpnProfileStatus = 'online' | 'offline';
 export type StatusChangeSource = 'bootstrap' | 'admin' | 'billing' | 'top_up' | 'user';
+export type DailyChargeKind = 'tarification' | 'additional_profiles';
 
 export interface User {
   id: string;
@@ -32,6 +33,8 @@ export interface UserCharge {
   amount: string;
   tariff_plan_id: string;
   tariff_plan_name: string;
+  kind: DailyChargeKind;
+  additional_profiles_count: number | null;
   created_at: string;
 }
 
