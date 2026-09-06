@@ -62,7 +62,7 @@ async def get_user_charge_history(db: AsyncSession, user_id: UUID) -> list[UserC
             .where(UserDailyCharge.user_id == user_id)
             .order_by(
                 UserDailyCharge.created_at.desc(),
-                UserDailyCharge.kind.desc(),
+                UserDailyCharge.kind.asc(),
             )
         )
     ).all()

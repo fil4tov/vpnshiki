@@ -52,9 +52,12 @@ describe('ChargeHistoryModal', () => {
     const user = userEvent.setup();
     renderModal('admin', '96.78');
 
-    expect(await screen.findByText('TP_01.08.2026 · Тарификация')).toBeInTheDocument();
-    expect(screen.getByText('TP_01.08.2026 · Доп. профили · 1 шт.'))
-      .toBeInTheDocument();
+    const tarification = await screen.findByText('TP_01.08.2026 · Тарификация');
+    const additionalProfiles = screen.getByText('TP_01.08.2026 · Доп. профили · 1 шт.');
+    expect(
+      additionalProfiles.compareDocumentPosition(tarification)
+      & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
     expect(getUserCharges).toHaveBeenCalledWith('user-one');
     expect(getMyCharges).not.toHaveBeenCalled();
     expect(screen.getByText('96,78 ₽')).toBeInTheDocument();

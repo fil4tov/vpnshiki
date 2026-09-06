@@ -21,6 +21,7 @@ const monthLabelFormatter = new Intl.DateTimeFormat('ru-RU', {
   timeZone: MOSCOW_TIME_ZONE,
 });
 const monthKeyFormatter = new Intl.DateTimeFormat('en-CA', {
+  day: '2-digit',
   month: '2-digit',
   year: 'numeric',
   timeZone: MOSCOW_TIME_ZONE,
@@ -51,6 +52,14 @@ function getMonthKey(createdAt: string) {
   return `${year}-${month}`;
 }
 
+function getDayKey(createdAt: string) {
+  const parts = monthKeyFormatter.formatToParts(new Date(createdAt));
+  const year = parts.find((part) => part.type === 'year')?.value;
+  const month = parts.find((part) => part.type === 'month')?.value;
+  const day = parts.find((part) => part.type === 'day')?.value;
+  return `${year}-${month}-${day}`;
+}
+
 function chargeDescription(charge: UserCharge) {
   if (charge.kind === 'additional_profiles') {
     return `Доп. профили · ${charge.additional_profiles_count ?? 0} шт.`;
@@ -60,7 +69,13 @@ function chargeDescription(charge: UserCharge) {
 
 function groupCharges(charges: UserCharge[], includeTariffPlan: boolean): MonthlyHistoryGroup[] {
   const groups = new Map<string, UserCharge[]>();
-  charges.forEach((charge) => {
+  const orderedCharges = [...charges].sort((left, right) => {
+    const dayOrder = getDayKey(right.created_at).localeCompare(getDayKey(left.created_at));
+    if (dayOrder !== 0) return dayOrder;
+    if (left.kind !== right.kind) return left.kind === 'additional_profiles' ? -1 : 1;
+    return right.created_at.localeCompare(left.created_at);
+  });
+  orderedCharges.forEach((charge) => {
     const key = getMonthKey(charge.created_at);
     groups.set(key, [...(groups.get(key) ?? []), charge]);
   });

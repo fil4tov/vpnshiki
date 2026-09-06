@@ -228,13 +228,13 @@ async def test_admin_creates_and_updates_user(
         "2026-08-02",
         "2026-08-01",
     ]
-    assert [entry["amount"] for entry in history] == ["20.50", "10.25", "10.25"]
+    assert [entry["amount"] for entry in history] == ["10.25", "20.50", "10.25"]
     assert [entry["kind"] for entry in history] == [
-        "tarification",
         "additional_profiles",
         "tarification",
+        "tarification",
     ]
-    assert [entry["additional_profiles_count"] for entry in history] == [None, 2, None]
+    assert [entry["additional_profiles_count"] for entry in history] == [2, None, None]
     assert [entry["tariff_plan_name"] for entry in history] == [
         "TP_01.08.2026",
         "TP_01.08.2026",
