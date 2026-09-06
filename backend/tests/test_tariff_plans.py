@@ -226,12 +226,14 @@ async def test_tariff_plan_billing_history_contains_daily_rate_and_user_count(
             item["billing_date"],
             item["daily_charge"],
             item["active_users_count"],
+            item["tarification_total"],
+            item["additional_profiles_total"],
             item["total_charged"],
         )
         for item in response.json()
     ] == [
-        ("2026-08-16", "32.26", 2, "80.65"),
-        ("2026-08-15", "64.52", 1, "64.52"),
+        ("2026-08-16", "32.26", 2, "64.52", "16.13", "80.65"),
+        ("2026-08-15", "64.52", 1, "64.52", "0.00", "64.52"),
     ]
 
 

@@ -9,6 +9,7 @@ export interface MonthlyHistoryRow {
   dateLabel: string;
   description?: string;
   amount: string;
+  breakdownAmounts?: [string, string];
   totalAmount?: string;
 }
 
@@ -24,6 +25,7 @@ interface MonthlyHistoryColumnLabels {
   date: string;
   description?: string;
   amount: string;
+  breakdownAmounts?: [string, string];
   totalAmount?: string;
 }
 
@@ -65,22 +67,39 @@ export function MonthlyHistory({
               <div id={panelId} className={styles.rows}>
                 {columnLabels && (
                   <div
-                    className={`${styles.row} ${styles.columnHeader} ${columnLabels.totalAmount ? styles.rowWithTotal : ''} ${columnLabels.description ? '' : styles.rowWithoutDescription}`}
+                    className={`${styles.row} ${styles.columnHeader} ${columnLabels.totalAmount ? styles.rowWithTotal : ''} ${columnLabels.breakdownAmounts ? styles.rowWithBreakdown : ''} ${columnLabels.description ? '' : styles.rowWithoutDescription}`}
                   >
                     <span>{columnLabels.date}</span>
                     {columnLabels.description && <span>{columnLabels.description}</span>}
                     <span>{columnLabels.amount}</span>
+                    {columnLabels.breakdownAmounts?.map((label) => (
+                      <span key={label}>{label}</span>
+                    ))}
                     {columnLabels.totalAmount && <span>{columnLabels.totalAmount}</span>}
                   </div>
                 )}
                 {group.rows.map((row) => (
                   <div
                     key={row.id}
-                    className={`${styles.row} ${row.totalAmount ? styles.rowWithTotal : ''} ${row.description ? '' : styles.rowWithoutDescription}`}
+                    className={`${styles.row} ${row.totalAmount ? styles.rowWithTotal : ''} ${row.breakdownAmounts ? styles.rowWithBreakdown : ''} ${row.description ? '' : styles.rowWithoutDescription}`}
                   >
-                    <time dateTime={row.dateTime}>{row.dateLabel}</time>
-                    {row.description && <span title={row.description}>{row.description}</span>}
+                    <time dateTime={row.dateTime} data-label={columnLabels?.date}>
+                      {row.dateLabel}
+                    </time>
+                    {row.description && (
+                      <span title={row.description} data-label={columnLabels?.description}>
+                        {row.description}
+                      </span>
+                    )}
                     <strong data-label={columnLabels?.amount}>{row.amount}</strong>
+                    {row.breakdownAmounts?.map((amount, index) => (
+                      <strong
+                        key={columnLabels?.breakdownAmounts?.[index] ?? index}
+                        data-label={columnLabels?.breakdownAmounts?.[index]}
+                      >
+                        {amount}
+                      </strong>
+                    ))}
                     {row.totalAmount && (
                       <strong data-label={columnLabels?.totalAmount}>{row.totalAmount}</strong>
                     )}

@@ -32,11 +32,13 @@ describe('TariffPlanBillingHistoryModal', () => {
     vi.mocked(getTariffPlanBillingHistory).mockResolvedValue([
       {
         id: 'august', billing_date: '2026-08-16', daily_charge: '32.26',
-        active_users_count: 2, total_charged: '80.65',
+        active_users_count: 2, tarification_total: '64.52',
+        additional_profiles_total: '16.13', total_charged: '80.65',
       },
       {
         id: 'july', billing_date: '2026-07-31', daily_charge: '64.52',
-        active_users_count: 1, total_charged: '64.52',
+        active_users_count: 1, tarification_total: '64.52',
+        additional_profiles_total: '0.00', total_charged: '64.52',
       },
     ]);
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -48,18 +50,31 @@ describe('TariffPlanBillingHistoryModal', () => {
     );
 
     expect(await screen.findByText('2 пользователя')).toBeInTheDocument();
+    expect(screen.getByText('16 августа')).toHaveAttribute('data-label', 'Дата');
+    expect(screen.getByText('2 пользователя')).toHaveAttribute('data-label', 'Пользователи');
     const title = screen.getByRole('heading', { name: 'История списаний' });
     const planName = screen.getByText('TP_01.08.2026');
     expect(title.compareDocumentPosition(planName) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getByText('Списано за всё время')).toBeInTheDocument();
     expect(screen.getByText('145,17 ₽')).toBeInTheDocument();
-    const headers = ['Дата', 'Пользователи', 'Базовая сумма', 'Всего списано'];
+    const headers = [
+      'Дата',
+      'Пользователи',
+      'Тарификация',
+      'Общая тарификация',
+      'Доп. профили',
+      'Всего списано',
+    ];
     const firstHeader = screen.getByText(headers[0]).parentElement;
     expect(firstHeader).not.toBeNull();
     expect(within(firstHeader as HTMLElement).getAllByText(/.+/).map((cell) => cell.textContent)).toEqual(
       headers,
     );
     expect(screen.getByText('−32,26 ₽')).toBeInTheDocument();
+    expect(screen.getByText('−64,52 ₽', { selector: '[data-label="Общая тарификация"]' }))
+      .toBeInTheDocument();
+    expect(screen.getByText('−16,13 ₽', { selector: '[data-label="Доп. профили"]' }))
+      .toBeInTheDocument();
     expect(within(screen.getByRole('button', { name: /Август 2026/i })).getByText('−80,65 ₽'))
       .toBeInTheDocument();
     expect(screen.getByText('−80,65 ₽', { selector: '[data-label="Всего списано"]' }))

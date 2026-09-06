@@ -22,6 +22,8 @@ export interface TariffPlanBillingRun {
   billing_date: string;
   daily_charge: string;
   active_users_count: number;
+  tarification_total: string;
+  additional_profiles_total: string;
   total_charged: string;
 }
 

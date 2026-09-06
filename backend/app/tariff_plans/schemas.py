@@ -66,8 +66,15 @@ class TariffPlanBillingRunRead(BaseModel):
     billing_date: date
     daily_charge: Decimal
     active_users_count: int
+    tarification_total: Decimal
+    additional_profiles_total: Decimal
     total_charged: Decimal
 
-    @field_serializer("daily_charge", "total_charged")
+    @field_serializer(
+        "daily_charge",
+        "tarification_total",
+        "additional_profiles_total",
+        "total_charged",
+    )
     def serialize_money(self, value: Decimal) -> str:
         return f"{value:.2f}"

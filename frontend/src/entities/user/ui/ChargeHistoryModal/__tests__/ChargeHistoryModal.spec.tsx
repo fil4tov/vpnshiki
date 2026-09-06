@@ -53,7 +53,7 @@ describe('ChargeHistoryModal', () => {
     renderModal('admin', '96.78');
 
     expect(await screen.findByText('TP_01.08.2026 · Тарификация')).toBeInTheDocument();
-    expect(screen.getByText('TP_01.08.2026 · Дополнительные профили · 1 шт.'))
+    expect(screen.getByText('TP_01.08.2026 · Доп. профили · 1 шт.'))
       .toBeInTheDocument();
     expect(getUserCharges).toHaveBeenCalledWith('user-one');
     expect(getMyCharges).not.toHaveBeenCalled();

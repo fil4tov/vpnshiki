@@ -53,7 +53,7 @@ function getMonthKey(createdAt: string) {
 
 function chargeDescription(charge: UserCharge) {
   if (charge.kind === 'additional_profiles') {
-    return `Дополнительные профили · ${charge.additional_profiles_count ?? 0} шт.`;
+    return `Доп. профили · ${charge.additional_profiles_count ?? 0} шт.`;
   }
   return 'Тарификация';
 }

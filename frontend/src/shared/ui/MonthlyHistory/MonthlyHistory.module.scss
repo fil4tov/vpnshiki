@@ -29,6 +29,7 @@
 .row { display: grid; grid-template-columns: 104px 1fr auto; gap: 14px; padding: 12px 16px; border-top: 1px solid color-mix(in srgb, var(--border) 62%, transparent); }
 .rowWithoutDescription { grid-template-columns: 104px 1fr; }
 .rowWithTotal { grid-template-columns: 96px minmax(82px, 1fr) minmax(156px, auto) minmax(96px, auto); gap: 12px; }
+.rowWithBreakdown { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 10px; }
 .row:first-child { border-top: 0; }
 .row time { color: var(--text-muted); font-size: .7rem; }
 .row span { min-width: 0; overflow: hidden; font-size: .7rem; text-overflow: ellipsis; white-space: nowrap; }
@@ -54,6 +55,12 @@
   .rowWithTotal strong { grid-column: auto; padding-top: 5px; }
   .rowWithTotal strong:first-of-type { grid-column: 2; text-align: left; }
   .rowWithTotal strong::before { display: block; margin-bottom: 3px; color: var(--text-muted); content: attr(data-label); font-family: var(--font-ui); font-size: .55rem; }
+  .rowWithBreakdown { grid-template-columns: minmax(0, 1fr); gap: 8px; align-items: center; padding-block: 14px; }
+  .rowWithBreakdown time, .rowWithBreakdown > span { grid-column: 1; display: flex; justify-content: space-between; gap: 16px; color: var(--text); text-align: right; }
+  .rowWithBreakdown time::before, .rowWithBreakdown > span::before { color: var(--text-muted); content: attr(data-label); font-family: var(--font-ui); font-size: .55rem; font-weight: 400; text-align: left; }
+  .rowWithBreakdown > span { font-weight: 650; }
+  .rowWithBreakdown strong, .rowWithBreakdown strong:first-of-type { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 16px; padding-top: 0; text-align: right; }
+  .rowWithBreakdown strong::before { margin-bottom: 0; text-align: left; }
 }
 
 @media (prefers-reduced-motion: reduce) {

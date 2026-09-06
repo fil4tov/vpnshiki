@@ -73,6 +73,10 @@ function groupRuns(runs: TariffPlanBillingRun[]): MonthlyHistoryGroup[] {
           'пользователей',
         ),
         amount: `−${formatMoney(run.daily_charge)}`,
+        breakdownAmounts: [
+          `−${formatMoney(run.tarification_total)}`,
+          `−${formatMoney(run.additional_profiles_total)}`,
+        ] as [string, string],
         totalAmount: `−${formatMoney((totalChargeInCents(run) / 100).toFixed(2))}`,
       })),
     };
@@ -133,7 +137,8 @@ export function TariffPlanBillingHistoryModal({
           columnLabels={{
             date: 'Дата',
             description: 'Пользователи',
-            amount: 'Базовая сумма',
+            amount: 'Тарификация',
+            breakdownAmounts: ['Общая тарификация', 'Доп. профили'],
             totalAmount: 'Всего списано',
           }}
         />

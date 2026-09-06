@@ -9,7 +9,12 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.billing.calculations import additional_profiles_charge, profile_count_for_date
-from app.billing.models import BillingRun, BillingRunStatus, UserDailyCharge
+from app.billing.models import (
+    BillingRun,
+    BillingRunStatus,
+    DailyChargeKind,
+    UserDailyCharge,
+)
 from app.errors import ApiError
 from app.users.models import AccountStatus, User
 
@@ -119,34 +124,46 @@ async def list_tariff_plan_billing_runs(
         await db.execute(
             select(
                 UserDailyCharge.created_at,
+                UserDailyCharge.kind,
                 func.sum(UserDailyCharge.amount),
             )
             .where(UserDailyCharge.tariff_plan_id == plan_id)
-            .group_by(UserDailyCharge.created_at)
+            .group_by(UserDailyCharge.created_at, UserDailyCharge.kind)
         )
     ).all()
-    totals_by_date: dict[date, Decimal] = {}
-    for created_at, total in charge_rows:
+    totals_by_date: dict[date, dict[str, Decimal]] = {}
+    for created_at, kind, total in charge_rows:
         normalized = created_at.replace(tzinfo=UTC) if created_at.tzinfo is None else created_at
         billing_date = normalized.astimezone(MOSCOW).date()
-        totals_by_date[billing_date] = totals_by_date.get(
-            billing_date, Decimal("0.00")
-        ) + total
-    return [
-        TariffPlanBillingRunRead.model_validate(
-            {
-                **{
-                    column.name: getattr(run, column.name)
-                    for column in run.__table__.columns
-                },
-                "total_charged": totals_by_date.get(
-                    run.billing_date,
-                    run.daily_charge * run.active_users_count,
-                ),
-            }
+        date_totals = totals_by_date.setdefault(billing_date, {})
+        date_totals[kind] = date_totals.get(kind, Decimal("0.00")) + total
+
+    result: list[TariffPlanBillingRunRead] = []
+    for run in runs:
+        fallback_tarification_total = run.daily_charge * run.active_users_count
+        date_totals = totals_by_date.get(run.billing_date, {})
+        tarification_total = date_totals.get(
+            DailyChargeKind.TARIFICATION.value,
+            fallback_tarification_total,
         )
-        for run in runs
-    ]
+        additional_profiles_total = date_totals.get(
+            DailyChargeKind.ADDITIONAL_PROFILES.value,
+            Decimal("0.00"),
+        )
+        result.append(
+            TariffPlanBillingRunRead.model_validate(
+                {
+                    **{
+                        column.name: getattr(run, column.name)
+                        for column in run.__table__.columns
+                    },
+                    "tarification_total": tarification_total,
+                    "additional_profiles_total": additional_profiles_total,
+                    "total_charged": tarification_total + additional_profiles_total,
+                }
+            )
+        )
+    return result
 
 
 async def get_user_daily_charge(db: AsyncSession, user: User) -> Decimal | None:
