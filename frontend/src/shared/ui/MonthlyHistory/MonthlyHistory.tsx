@@ -7,6 +7,7 @@ export interface MonthlyHistoryRow {
   id: string;
   dateTime: string;
   dateLabel: string;
+  secondaryDescription?: string;
   description?: string;
   amount: string;
   breakdownAmounts?: [string, string];
@@ -23,6 +24,7 @@ export interface MonthlyHistoryGroup {
 
 interface MonthlyHistoryColumnLabels {
   date: string;
+  secondaryDescription?: string;
   description?: string;
   amount: string;
   breakdownAmounts?: [string, string];
@@ -67,9 +69,12 @@ export function MonthlyHistory({
               <div id={panelId} className={styles.rows}>
                 {columnLabels && (
                   <div
-                    className={`${styles.row} ${styles.columnHeader} ${columnLabels.totalAmount ? styles.rowWithTotal : ''} ${columnLabels.breakdownAmounts ? styles.rowWithBreakdown : ''} ${columnLabels.description ? '' : styles.rowWithoutDescription}`}
+                    className={`${styles.row} ${styles.columnHeader} ${columnLabels.totalAmount ? styles.rowWithTotal : ''} ${columnLabels.breakdownAmounts ? styles.rowWithBreakdown : ''} ${columnLabels.secondaryDescription ? styles.rowWithSecondaryDescription : ''} ${columnLabels.description ? '' : styles.rowWithoutDescription}`}
                   >
                     <span>{columnLabels.date}</span>
+                    {columnLabels.secondaryDescription && (
+                      <span>{columnLabels.secondaryDescription}</span>
+                    )}
                     {columnLabels.description && <span>{columnLabels.description}</span>}
                     <span>{columnLabels.amount}</span>
                     {columnLabels.breakdownAmounts?.map((label) => (
@@ -81,11 +86,19 @@ export function MonthlyHistory({
                 {group.rows.map((row) => (
                   <div
                     key={row.id}
-                    className={`${styles.row} ${row.totalAmount ? styles.rowWithTotal : ''} ${row.breakdownAmounts ? styles.rowWithBreakdown : ''} ${row.description ? '' : styles.rowWithoutDescription}`}
+                    className={`${styles.row} ${row.totalAmount ? styles.rowWithTotal : ''} ${row.breakdownAmounts ? styles.rowWithBreakdown : ''} ${row.secondaryDescription ? styles.rowWithSecondaryDescription : ''} ${row.description ? '' : styles.rowWithoutDescription}`}
                   >
                     <time dateTime={row.dateTime} data-label={columnLabels?.date}>
                       {row.dateLabel}
                     </time>
+                    {row.secondaryDescription && (
+                      <span
+                        title={row.secondaryDescription}
+                        data-label={columnLabels?.secondaryDescription}
+                      >
+                        {row.secondaryDescription}
+                      </span>
+                    )}
                     {row.description && (
                       <span title={row.description} data-label={columnLabels?.description}>
                         {row.description}

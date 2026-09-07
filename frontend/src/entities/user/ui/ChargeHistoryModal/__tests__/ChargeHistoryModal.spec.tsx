@@ -52,8 +52,8 @@ describe('ChargeHistoryModal', () => {
     const user = userEvent.setup();
     renderModal('admin', '96.78');
 
-    const tarification = await screen.findByText('TP_01.08.2026 · Тарификация');
-    const additionalProfiles = screen.getByText('TP_01.08.2026 · Доп. профили · 1 шт.');
+    const additionalProfiles = await screen.findByText('Доп. профили · 1 шт.');
+    const tarification = screen.getByText('Тарификация');
     expect(
       additionalProfiles.compareDocumentPosition(tarification)
       & Node.DOCUMENT_POSITION_FOLLOWING,
@@ -62,14 +62,18 @@ describe('ChargeHistoryModal', () => {
     expect(getMyCharges).not.toHaveBeenCalled();
     expect(screen.getByText('96,78 ₽')).toBeInTheDocument();
     expect(screen.getByText('Дата')).toBeInTheDocument();
-    expect(screen.getByText('Тариф и тип')).toBeInTheDocument();
+    expect(screen.getByText('Тариф')).toBeInTheDocument();
+    expect(screen.getByText('Тип')).toBeInTheDocument();
+    expect(screen.getAllByText('TP_01.08.2026')).toHaveLength(2);
+    expect(screen.queryByText('Тариф и тип')).not.toBeInTheDocument();
     expect(screen.getByText('Сумма')).toBeInTheDocument();
     expect(screen.getByText('−32,26 ₽')).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /Июль 2026/i }));
-    expect(screen.getByText('TP_01.07.2026 · Тарификация')).toBeInTheDocument();
+    expect(screen.getByText('TP_01.07.2026')).toBeInTheDocument();
+    expect(screen.getByText('Тарификация')).toBeInTheDocument();
     expect(screen.getAllByText('−64,52 ₽')).toHaveLength(2);
-    expect(screen.queryByText('TP_01.08.2026 · Тарификация')).not.toBeInTheDocument();
+    expect(screen.queryByText('TP_01.08.2026')).not.toBeInTheDocument();
   });
 
   it('uses the self endpoint without the tariff plan column', async () => {
