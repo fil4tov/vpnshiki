@@ -24,6 +24,12 @@
 }
 .link:focus-visible, .activeLink:focus-visible { outline: none; box-shadow: var(--focus); }
 
+@media (min-width: 761px) and (max-width: 1024px) {
+  .sidebar { padding-inline: 10px; }
+  .link, .activeLink { justify-content: center; gap: 0; padding-inline: 0; font-size: 1rem; }
+  .link span, .activeLink span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+}
+
 @media (max-width: 760px) {
   .sidebar { position: static; grid-row: 2; grid-column: 1; width: 100%; height: auto; padding: 10px 14px 12px; border-right: 0; border-bottom: 1px solid var(--border); }
   .navigation {

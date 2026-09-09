@@ -29,10 +29,10 @@
 @media (max-width: 580px) {
   .header { height: 68px; }
   .inner { gap: 12px; padding-inline: 14px; }
-  .brand { gap: 8px; }
-  .brandMark { width: 34px; height: 34px; border-radius: 11px 4px 11px 11px; }
-  .brand strong { font-size: .96rem; }
-  .actions { gap: 6px; }
+  .brand { min-width: 0; flex: 1 1 auto; gap: 8px; }
+  .brandMark { width: 34px; height: 34px; flex: 0 0 34px; border-radius: 11px 4px 11px 11px; }
+  .brand strong { min-width: 0; font-size: clamp(.72rem,4vw,.96rem); white-space: nowrap; }
+  .actions { flex: 0 0 auto; gap: 6px; }
   .adminLink { width: 40px; min-height: 40px; padding: 0; }
   .adminLink span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
   .iconButton { width: 40px; min-height: 40px; }

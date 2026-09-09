@@ -48,10 +48,13 @@
 
 @media (max-width: 580px) {
   .pulse { min-height: auto; padding: 22px; }
-  .topLine { align-items: flex-start; flex-wrap: wrap; }
-  .dailyCharge { min-height: 40px; }
-  .dailyCharge span { font-size: .62rem; }
-  .dailyCharge strong { font-size: .94rem; }
+  .topLine { align-items: center; gap: clamp(6px,2vw,12px); }
+  .status { min-width: 0; gap: clamp(5px,1.5vw,8px); }
+  .status span { font-size: clamp(.54rem,2.4vw,.63rem); white-space: nowrap; }
+  .status strong { font-size: clamp(.65rem,2.8vw,.76rem); }
+  .dailyCharge { min-width: 0; min-height: 40px; flex-shrink: 1; gap: clamp(5px,2vw,10px); padding-inline: clamp(7px,2.5vw,11px); }
+  .dailyCharge span { gap: 4px; font-size: clamp(.54rem,2.3vw,.62rem); white-space: nowrap; }
+  .dailyCharge strong { font-size: clamp(.78rem,3.5vw,.94rem); }
   .mainContent { grid-template-columns: 1fr; justify-items: center; gap: 26px; padding-top: 34px; text-align: center; }
   .finances { grid-column: auto; width: 100%; }
   .balance { align-items: center; justify-items: center; text-align: center; }

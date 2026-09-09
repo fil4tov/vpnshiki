@@ -26,6 +26,14 @@
 .close:focus-visible { outline: none; box-shadow: var(--focus); }
 
 @media (max-width: 580px) {
+  .backdrop {
+    padding:
+      max(20px, env(safe-area-inset-top))
+      max(5px, env(safe-area-inset-right))
+      max(20px, env(safe-area-inset-bottom))
+      max(5px, env(safe-area-inset-left));
+  }
+
   .body :global([data-modal-footer]) {
     display: flex;
     flex-direction: column;
